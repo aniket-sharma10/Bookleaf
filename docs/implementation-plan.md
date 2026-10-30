@@ -10,7 +10,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 |---|---|---|---|
 | T1.1 | Scaffold Next.js app and scripts | — | done |
 | T1.2 | Strict TS, Prettier, Vitest baseline | T1.1 | done |
-| T1.3 | Env validation and secret hygiene | T1.2 | todo |
+| T1.3 | Env validation and secret hygiene | T1.2 | done |
 | T1.4 | Local dev/test Postgres (Docker) and Prisma client | T1.3 | todo |
 | T1.5 | Initial schema and migration | T1.4 | todo |
 | T1.6 | Seed exact dataset (authors, books) | T1.5 | todo |
@@ -99,6 +99,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `src/server/env.ts` (Zod schema, lazy parse, clear error listing the missing variable names). Install `server-only`. Write `.env.example` with every variable from architecture §8 and no real values. Confirm `.gitignore` covers `.env*`.
 - **Acceptance:** a missing `DATABASE_URL` throws a readable error. A missing `GEMINI_API_KEY` is allowed (AI disabled). Importing `server/env` into a client component fails the build.
 - **Verify:** unit test for env parsing. `git check-ignore .env` succeeds.
+- **Outcome (2026-10-30):**
+  - `src/server/env.ts` exports `parseEnv`, a lazily memoised `getEnv` and `requireEnv`. All variables are optional but validated when set, so features fail at the point of use, not at startup.
+  - Dependencies added: `zod` and `server-only`. Vitest aliases `server-only` to its no-op build.
+  - `.env.example` contains placeholders only.
+  - Verified: 9 env unit tests; error messages contain no values; a temporary client page importing `env.ts` failed `next build`; all `.env*` variants are ignored except `.env.example`.
 
 ### T1.4 Local Postgres and Prisma client
 - **Reqs:** DATA-01 (infrastructure)

@@ -254,7 +254,13 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 | `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` | seed only | for seeding | Demo credentials are documented in the README |
 | `SEED_DATA_PATH` | seed only | no | Default `./bookleaf_sample_data.json` |
 
-`server/env.ts` validates variables with Zod on first use and fails fast with a clear message. No variable is prefixed `NEXT_PUBLIC_`, and nothing secret reaches the client.
+`server/env.ts` imports `server-only` and validates variables with Zod on first use.
+- Every variable is optional but must be valid if set. The app therefore never fails at startup because a not-yet-used integration (for example Gemini) is unconfigured.
+- A feature that needs a value calls `requireEnv(name)`, which throws a clear error naming the missing variable.
+- Validation errors list variable names and rules only, never values.
+- No variable is prefixed `NEXT_PUBLIC_`, and nothing secret reaches the client.
+- Vitest aliases `server-only` to its no-op build, because tests run without Next's `react-server` condition.
+- Node scripts that run outside Next (seed, verification) must either not import `server/*` modules or run Node with `--conditions=react-server`.
 
 **Local databases (Docker Compose).** The compose file sets `name: bookleaf`, so every resource is namespaced and cannot collide with other projects' Postgres containers or volumes on the same machine. It uses the stock `postgres:16-alpine` image; there is no custom image to build.
 

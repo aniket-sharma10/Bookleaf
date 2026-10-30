@@ -3,8 +3,16 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    // Mirrors the "@/*" path alias in tsconfig.json.
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      // Mirrors the "@/*" path alias in tsconfig.json.
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // `server-only` throws unless resolved with Next's "react-server"
+      // condition. Tests run server code directly in Node, so use its no-op
+      // build. The guard still applies in the real Next.js bundles.
+      "server-only": fileURLToPath(
+        new URL("./node_modules/server-only/empty.js", import.meta.url),
+      ),
+    },
   },
   test: {
     environment: "node",
