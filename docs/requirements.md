@@ -1,8 +1,8 @@
 # Requirements — Author Support & Communication Portal
 
-The source of truth is the assignment brief (PDF) and `bookleaf_sample_data.json`. Both are kept **locally only and are git-ignored**. This document restates the requirements in our own words so the implementation never has to guess.
+The source of truth is the product brief (PDF) and `bookleaf_sample_data.json`. Both are kept **locally only and are git-ignored**. This document restates the requirements in our own words so the implementation never has to guess.
 
-> **Public repository.** This repo is public (confirmed with BookLeaf HR). Committed files must not reproduce the brief or dataset verbatim. Requirements are paraphrased, dataset records are referred to by ID, and expected values in tests are loaded from the local JSON at runtime rather than hard-coded.
+> **Public repository.** This repo is public. Committed files must not reproduce the brief or dataset verbatim. Requirements are paraphrased, dataset records are referred to by ID, and expected values in tests are loaded from the local JSON at runtime rather than hard-coded.
 
 **Priority legend**
 
@@ -11,9 +11,9 @@ The source of truth is the assignment brief (PDF) and `bookleaf_sample_data.json
 | **Mandatory** | Explicitly required by the brief. |
 | **Bonus** | Named as optional or bonus by the brief. |
 | **Derived** | Not stated literally, but needed to satisfy a mandatory requirement or the project's security rules. The rationale is given. |
-| **Recommended** | A product or quality choice we propose. It can be dropped without breaking the assignment. |
+| **Recommended** | A product or quality choice we propose. It can be dropped without breaking a requirement. |
 
-`Src` gives the section of the brief: A = Author Portal, B = Admin Portal, C = API Layer, D = AI Integration, KB = Knowledge Base, DS = Sample Dataset, TG = Technology Guidelines, SUB = Submission, EV = Evaluation, IN = Important Notes. `Brief` means the project owner's planning brief.
+`Src` gives the section of the brief: A = Author Portal, B = Admin Portal, C = API Layer, D = AI Integration, KB = Knowledge Base, DS = Sample Dataset, TG = Technology Guidelines, SUB = Deliverables, EV = Priorities, IN = Process notes. `Brief` means the project owner's planning brief.
 
 ---
 
@@ -127,7 +127,7 @@ The source of truth is the assignment brief (PDF) and `bookleaf_sample_data.json
 
 | ID | Requirement | Priority | Src | Acceptance criterion | Data deps |
 |---|---|---|---|---|---|
-| DEL-01 | The source code is in a GitHub repository with the reviewer as collaborator (email pending). The brief asks for a private repo, but BookLeaf HR has confirmed this repo may be **public**. The brief and dataset must still never be committed. | Mandatory | SUB, IN | Collaborator invited. `git ls-files` shows no PDF, dataset JSON or `.env`. | — |
+| DEL-01 | The source code is in a public GitHub repository, with collaborator access for BookLeaf (address pending). The brief and dataset are never committed. | Mandatory | SUB, IN | Collaborator invited. `git ls-files` shows no PDF, dataset JSON or `.env`. | — |
 | DEL-02 | Clean commit history. | Recommended | SUB | One commit per task. | — |
 | DEL-03 | A live URL with both portals, pre-seeded with the exact dataset. | Mandatory | SUB, DS | Live smoke test passes. `db:verify` passes against production. | all |
 | DEL-04 | Test credentials are in the README. | Mandatory | SUB | They work on the live demo. | — |
@@ -136,7 +136,7 @@ The source of truth is the assignment brief (PDF) and `bookleaf_sample_data.json
 | DEL-07 | A write-up of at most one page: priorities, trade-offs and how this becomes production-ready. | Mandatory | SUB | `docs/write-up.md`, about 500 words or fewer. | — |
 | DEL-08 | Automated Vitest tests cover authorization, validation, AI failure paths and seeding. They use mocked AI, **only the dedicated test database**, and **synthetic data only** (never the confidential dataset). | Derived | Brief, EV | `npm test` passes offline without `GEMINI_API_KEY`. It refuses to run against a non-test database. | — |
 | DEL-09 | No secrets in the repo. `.env.example` documents every variable. | Mandatory | D | Grep is clean. `.env*` is ignored except the example. | — |
-| DEL-10 | Every line can be explained by the owner. | Mandatory | IN | The code stays small and conventional. | — |
+| DEL-10 | The code is easy to understand and explain, line by line. | Mandatory | IN | The code stays small and conventional, with comments where intent isn't obvious. | — |
 
 ---
 
@@ -239,12 +239,11 @@ This is a concise structured summary, not a copy of the brief. At runtime it liv
 
 ## 15. Deliverables and confidentiality
 
-1. A GitHub repo (public, per HR) with the reviewer as collaborator and a clean history.
+1. A public GitHub repo with BookLeaf collaborator access and a clean history.
 2. A live URL with both portals, seeded with the exact dataset, and test credentials in the README.
 3. A README covering setup, architecture decisions, AI integration (prompts, error handling, cost), model choice, API docs and limitations.
 4. A write-up of at most one page.
-5. A follow-up walkthrough, in which the owner can explain every line.
 
-**Confidentiality:** the PDF and the raw JSON are never committed (`.gitignore`). Committed docs and code paraphrase requirements and KB facts and never reproduce the brief verbatim. Tests and the seed read dataset values from the local JSON at runtime.
+**Confidentiality:** the PDF and the raw JSON are never committed (`.gitignore`). Committed docs and code paraphrase requirements and KB facts and never reproduce the brief verbatim. Only the seed and `db:verify` read the local JSON, at runtime; tests use synthetic fixtures.
 
-**Evaluation emphasis:** AI integration and architecture/code quality carry the most weight. If time is short, prioritise the core ticket flow and AI integration over nice-to-haves.
+**Priorities:** AI integration and architecture/code quality matter most. If time is short, prioritise the core ticket flow and AI integration over nice-to-haves.

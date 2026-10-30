@@ -18,6 +18,12 @@ const DEV = "postgresql://bookleaf:pw@127.0.0.1:55432/bookleaf_dev";
 const TEST = "postgresql://bookleaf:pw@127.0.0.1:55433/bookleaf_test";
 // `.invalid` never resolves (RFC 2606), so these can't reach a real server.
 const REMOTE = "postgresql://someuser:S3cretPass@db.example.invalid:5432/prod";
+// A registered hosted (Neon-style) development database and a different,
+// unregistered one (e.g. a future production project).
+const NEON_DEV_HOST = "ep-dev-1.example.invalid";
+const NEON_DEV = `postgresql://u:pw@${NEON_DEV_HOST}/neondb?sslmode=require`;
+const NEON_OTHER =
+  "postgresql://u:pw@ep-prod-2.example.invalid/neondb?sslmode=require";
 
 const unintended = [
   ["another local Postgres", "postgresql://u:pw@127.0.0.1:5432/bookleaf_dev"],
@@ -34,8 +40,40 @@ const unintended = [
 ];
 
 describe("assertLocalDevDatabase (seed and db:verify)", () => {
-  const guard = (url: string | undefined, nodeEnv = "development") =>
-    assertLocalDevDatabase(url, { action: "seed", nodeEnv });
+  // devHost is passed explicitly so results never depend on the shell.
+  const guard = (
+    url: string | undefined,
+    nodeEnv = "development",
+    devHost?: string,
+  ) => assertLocalDevDatabase(url, { action: "seed", nodeEnv, devHost });
+
+  it("accepts the registered hosted dev database, and only that host", () => {
+    expect(() => guard(NEON_DEV, "development", NEON_DEV_HOST)).not.toThrow();
+    expect(() => guard(NEON_OTHER, "development", NEON_DEV_HOST)).toThrow(
+      DatabaseTargetError,
+    );
+    expect(() => guard(NEON_DEV)).toThrow(DatabaseTargetError); // unregistered
+    expect(() => guard(TEST, "development", NEON_DEV_HOST)).toThrow(
+      DatabaseTargetError,
+    );
+    expect(() => guard(NEON_DEV, "production", NEON_DEV_HOST)).toThrow(
+      /NODE_ENV is production/,
+    );
+  });
+
+  it("ignores a local address registered as the dev host", () => {
+    // Otherwise every local database, including the test one, would be "dev".
+    expect(() => guard(TEST, "development", "127.0.0.1")).toThrow(
+      DatabaseTargetError,
+    );
+    expect(() =>
+      guard(
+        "postgresql://u:pw@127.0.0.1:5432/other",
+        "development",
+        "127.0.0.1",
+      ),
+    ).toThrow(DatabaseTargetError);
+  });
 
   it("accepts the local development database", () => {
     expect(() => guard(DEV)).not.toThrow();
@@ -71,12 +109,23 @@ describe("assertPrismaCliTarget (prisma.config.ts)", () => {
     url: string | undefined,
     argv: string[] = ["node", "prisma", "migrate", "reset", "--force"],
     allowRemote?: string,
-  ) => assertPrismaCliTarget({ url, argv, allowRemote });
+    devHost?: string,
+  ) => assertPrismaCliTarget({ url, argv, allowRemote, devHost });
 
   it("allows the two local databases and commands without a URL", () => {
     expect(() => cli(DEV)).not.toThrow();
     expect(() => cli(TEST)).not.toThrow();
     expect(() => cli(undefined, ["node", "prisma", "generate"])).not.toThrow();
+  });
+
+  it("allows the registered hosted dev database, and no other hosted one", () => {
+    expect(() =>
+      cli(NEON_DEV, undefined, undefined, NEON_DEV_HOST),
+    ).not.toThrow();
+    expect(() => cli(NEON_OTHER, undefined, undefined, NEON_DEV_HOST)).toThrow(
+      DatabaseTargetError,
+    );
+    expect(() => cli(NEON_DEV)).toThrow(DatabaseTargetError); // unregistered
   });
 
   it.each(unintended)("refuses %s", (_label, url) => {
@@ -125,6 +174,20 @@ describe("test-database guard (tests/helpers/test-database.ts)", () => {
     expect(() => assertTestDatabase(TEST, "production")).toThrow(
       /NODE_ENV is "production"/,
     );
+  });
+
+  it("never accepts the registered hosted dev database as the test database", () => {
+    // assertLocalDatabase reads DEV_DATABASE_HOST by default; force it here.
+    const previous = process.env.DEV_DATABASE_HOST;
+    process.env.DEV_DATABASE_HOST = NEON_DEV_HOST;
+    try {
+      expect(() => assertTestDatabase(NEON_DEV, "test")).toThrow(
+        DatabaseTargetError,
+      );
+    } finally {
+      if (previous === undefined) delete process.env.DEV_DATABASE_HOST;
+      else process.env.DEV_DATABASE_HOST = previous;
+    }
   });
 
   it.each(unintended)("refuses %s as the test database", (_label, url) => {

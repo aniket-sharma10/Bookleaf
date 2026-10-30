@@ -6,7 +6,7 @@
 - **Requirements:** DATA-01, DATA-02, BOOK-01–04, MGMT-02, AI-03, AI-04, AI-06, AUTH-06
 
 ## Context
-- Reviewers test with the exact supplied records, so the seeded data must match the JSON field for field.
+- The app must work out of the box with the exact supplied records, so the seeded data must match the JSON field for field.
 - The dataset has masked placeholder ISBNs, nullable fields for books still in production, empty platform lists, and money as whole rupees.
 - There are no users, admins or tickets in the data.
 - Admins must be able to override AI classification, and internal notes must never reach authors.

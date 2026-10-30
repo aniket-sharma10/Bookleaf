@@ -8,16 +8,16 @@ Work in progress. The full README (setup, credentials, architecture, AI integrat
 - Docker (for the local PostgreSQL containers)
 - Next.js 16.4 (App Router, Turbopack, `src/` directory, `@/*` alias), React 19, Tailwind CSS 4, TypeScript
 
-Local databases run in Docker (Compose project `bookleaf`, Postgres 16):
-`bookleaf-db-dev` on `127.0.0.1:55432` and a disposable `bookleaf-db-test` on `127.0.0.1:55433`.
+Development data lives in a Neon Postgres project. Set `DATABASE_URL` (pooled), `DIRECT_URL` (direct) and `DEV_DATABASE_HOST` (the direct host) in `.env`; see `.env.example`.
+Tests use a disposable local Docker database, `bookleaf-db-test` on `127.0.0.1:55433` (Compose project `bookleaf`, Postgres 16). A local `bookleaf-db-dev` on `127.0.0.1:55432` is an optional alternative to Neon.
 
 ```bash
-cp .env.example .env    # local-dev values; never commit .env
+cp .env.example .env    # then fill in the Neon values; never commit .env
 npm install             # also runs `prisma generate` (postinstall)
-npm run db:up           # start both databases and wait until healthy
-npx prisma migrate dev      # apply migrations to bookleaf_dev
+npm run db:up           # start the local Docker databases (the test DB is needed by npm test)
+npx prisma migrate deploy   # apply migrations to the dev database (Neon)
 npm run db:seed             # load the supplied authors/books (needs bookleaf_sample_data.json in the project root, or SEED_DATA_PATH)
-npm run db:verify           # read-only: confirm bookleaf_dev matches the dataset field by field
+npm run db:verify           # read-only: confirm the dev database matches the dataset field by field
 npm run dev        # http://localhost:3000
 npm run lint       # ESLint (eslint-config-next)
 npm run typecheck  # next typegen + tsc --noEmit (strict)
@@ -27,4 +27,4 @@ npm run build      # production build
 npm run db:down    # stop and remove the containers (dev data volume is kept)
 ```
 
-Prisma CLI commands may only target the two local databases. The `--url` override is refused, and a remote database needs `PRISMA_ALLOW_REMOTE_DATABASE=true` for that one command (see `docs/adr/0008-prisma-cli-target-guard.md`).
+Prisma CLI commands may only target the dev database (the registered Neon host or local Docker) or the local test database. The `--url` override is refused, and a remote database needs `PRISMA_ALLOW_REMOTE_DATABASE=true` for that one command (see `docs/adr/0008-prisma-cli-target-guard.md`).

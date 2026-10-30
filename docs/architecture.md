@@ -255,9 +255,10 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 
 | Variable | Used by | Required | Notes |
 |---|---|---|---|
-| `DATABASE_URL` | app, Prisma | yes | Local dev: `bookleaf_dev` on port 55432. Tests: `bookleaf_test` on port 55433 (from `.env.test` only). Production: hosted DB, pooled URL. |
+| `DATABASE_URL` | app, Prisma | yes | Development: the Neon dev project's **pooled** URL (or local Docker `bookleaf_dev`). Tests: `bookleaf_test` on port 55433 (from `.env.test` only). Production: a separate hosted DB, pooled URL. |
 | `AUTH_JWT_SECRET` | server/auth | yes | At least 32 random bytes (e.g. `openssl rand -base64 48`). Different per environment. Rotating it logs everyone out. |
-| `DIRECT_URL` | Prisma migrate | prod only | Non-pooled URL for migrations, if the provider requires it |
+| `DIRECT_URL` | Prisma CLI, seed, `db:verify` | with Neon | The Neon **direct** (non-pooled) URL. Empty for local Docker. |
+| `DEV_DATABASE_HOST` | guards (`prisma/db-target.ts`) | with Neon | The `DIRECT_URL` host. Registers it as the development database (ADR-0008). Not a secret, but kept in `.env`. |
 | `GEMINI_API_KEY` | server/ai | no | Unset means AI is disabled and graceful mode is used |
 | `GEMINI_CLASSIFY_MODEL`, `GEMINI_DRAFT_MODEL` | server/ai | no | Defaults are set in code after verifying current model IDs |
 | `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` | seed only | for seeding | Demo credentials are documented in the README |
@@ -268,7 +269,7 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 - App code reads configuration only through `server/env.ts`: `getEnv()` and `requireEnv(name)`. That file is server-only.
 - All variables are optional but validated if set. Nothing uses a `NEXT_PUBLIC_` prefix.
 - The CLI entry points `prisma.config.ts`, `prisma/seed.ts` and `prisma/verify.ts` cannot import server-only modules. They load `.env` with `process.loadEnvFile()` and read `process.env` directly.
-- Migrations use `DIRECT_URL || DATABASE_URL`. The app's runtime client (`getDb()`) always uses `DATABASE_URL`.
+- Migrations, the seed and `db:verify` use `DIRECT_URL || DATABASE_URL`. The app's runtime client (`getDb()`) always uses `DATABASE_URL`.
 
 **Local databases (Docker Compose).** Rationale and the guards are in **ADR-0006**. The compose file sets `name: bookleaf`, so every resource is namespaced and cannot collide with other projects' Postgres containers or volumes on the same machine. It uses the stock `postgres:16-alpine` image; there is no custom image to build.
 
@@ -290,7 +291,9 @@ The ports are deliberately non-default to avoid clashing with other local Postgr
 
 Test files run one at a time (`fileParallelism: false`) because they share one database. `npm test` needs the `bookleaf-db-test` container running.
 
-**Prisma CLI guard (ADR-0008).** `prisma.config.ts` refuses any target other than the two local databases, and refuses the `--url` override, unless `PRISMA_ALLOW_REMOTE_DATABASE=true`. Limitation: `--config <other file>` bypasses it.
+**Development database.** Development uses a Neon project; the guards accept its exact host once it's registered in `DEV_DATABASE_HOST`. Local Docker `bookleaf_dev` remains a fallback. Tests always use local Docker `bookleaf_test`.
+
+**Prisma CLI guard (ADR-0008).** `prisma.config.ts` refuses any target other than the dev database (local or registered Neon host) and the local test database. It refuses the `--url` override, unless `PRISMA_ALLOW_REMOTE_DATABASE=true`. Limitation: `--config <other file>` bypasses it.
 
 The production database is hosted (Neon) and is never referenced by `.env` or `.env.test`.
 

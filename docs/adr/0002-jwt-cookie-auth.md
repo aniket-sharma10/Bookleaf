@@ -7,7 +7,7 @@
 
 ## Context
 - Login is email and password only, for two roles. The admin accounts are seeded because the dataset has none.
-- The brief evaluates authentication middleware, role-based access and per-author data isolation.
+- The brief requires authentication middleware, role-based access and per-author data isolation.
 - The owner wants auth that is simple, secure, testable and fully explainable, with no external provider, OAuth or OTP.
 - No library performs per-record authorization for us, so that code is ours either way.
 
@@ -28,7 +28,7 @@
 - **CSRF:** SameSite=Lax, plus an Origin check on mutating requests.
 
 ## Rationale
-- The owner chose this approach explicitly: simple email/password auth (which the assignment permits), kept "straightforward, secure, and testable".
+- The owner chose this approach explicitly: simple email/password auth (which the brief permits), kept "straightforward, secure, and testable".
 - An HttpOnly cookie keeps the token out of reach of client JavaScript, so an XSS bug cannot read it.
 - A stateless token needs no session table and no DB lookup per request.
 - Verification is one pure function, which makes it easy to unit-test.

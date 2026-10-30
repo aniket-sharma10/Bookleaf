@@ -6,7 +6,7 @@
 - **Requirements:** RT-01, RT-02
 
 ## Context
-Authors must see admin responses and status changes "without refreshing the page". The assignment allows WebSockets, SSE or polling, and only asks that updates "feel responsive". The app is deployed as serverless functions (Vercel) with no shared in-memory state between instances.
+Authors must see admin responses and status changes "without refreshing the page". The brief allows WebSockets, SSE or polling, and only asks that updates "feel responsive". The app is deployed as serverless functions (Vercel) with no shared in-memory state between instances.
 
 ## Decision
 Client-side polling with SWR `refreshInterval`:
@@ -17,7 +17,7 @@ Client-side polling with SWR `refreshInterval`:
 Polling pauses while the tab is hidden and revalidates on focus. Responses are small JSON payloads from existing REST endpoints, so no new API surface is added. The admin reply composer keeps local state so that polling never overwrites text being edited.
 
 ## Rationale
-- The assignment allows WebSockets, Server-Sent Events or polling, and only asks that updates feel responsive.
+- The brief allows WebSockets, Server-Sent Events or polling, and only asks that updates feel responsive.
 - The owner confirmed polling is acceptable and asked to keep it.
 - Polling reuses the existing REST endpoints and needs no infrastructure that serverless hosting lacks.
 

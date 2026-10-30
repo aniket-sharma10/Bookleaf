@@ -1,7 +1,11 @@
 import { existsSync } from "node:fs";
 import { defineConfig } from "prisma/config";
 
-import { ALLOW_REMOTE_ENV, assertPrismaCliTarget } from "./prisma/db-target";
+import {
+  ALLOW_REMOTE_ENV,
+  assertPrismaCliTarget,
+  DEV_HOST_ENV,
+} from "./prisma/db-target";
 
 // Prisma 7 no longer reads .env itself. Load it locally with Node's built-in
 // loader (variables already set, e.g. by the hosting provider, take precedence).
@@ -16,12 +20,14 @@ const url = process.env.DIRECT_URL || process.env.DATABASE_URL || undefined;
 
 // Every Prisma CLI command loads this file first, so this is the one place
 // that can stop `migrate reset`, `migrate dev`, `db push` or `db execute` from
-// reaching an unintended database (ADR-0008). Only the two local databases
-// pass unless the remote opt-in is set for that command.
+// reaching an unintended database (ADR-0008). Only the dev database (local or
+// the registered Neon host) and the local test database pass, unless the
+// remote opt-in is set for that command.
 assertPrismaCliTarget({
   url,
   argv: process.argv,
   allowRemote: process.env[ALLOW_REMOTE_ENV],
+  devHost: process.env[DEV_HOST_ENV],
 });
 
 export default defineConfig({

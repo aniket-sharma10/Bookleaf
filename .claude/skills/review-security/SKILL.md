@@ -23,7 +23,7 @@ Review the code; don't assume. Findings must cite `file:line` and describe a con
 - Enumerate every route file. Each one, except login, is wrapped in `withApi` with the correct `role`. Confirm the authz matrix test lists every route.
 - Nothing relies on `proxy.ts` or layouts for protection.
 - Admin-only mutations (status, overrides, notes, drafts, classification) reject authors.
-- `assigneeId` is limited to the caller or null.
+- Assignment is self-only (MGMT-03): the update endpoint accepts `assignToMe: true` and sets the assignee to the caller. It has no field for assigning, or unassigning, anyone else, and unknown fields are rejected.
 
 **Ownership and data exposure**
 - Author services derive `authorId` from the verified token only. Search for `authorId` coming from params, the body or query strings.
@@ -37,9 +37,18 @@ Review the code; don't assume. Findings must cite `file:line` and describe a con
 - Mutations check Origin and Content-Type (CSRF).
 
 **Secrets and configuration**
-- `git grep -nE "AIza|GEMINI_API_KEY\s*=|postgres(ql)?://[^ ]*:[^ ]*@"` finds only `.env.example` placeholders.
+- `git grep -nE "AIza|GEMINI_API_KEY\s*=|postgres(ql)?://[^ ]*:[^ ]*@"` finds only the throwaway local Docker credentials in `.env.example`, `.env.test.example`, `docker-compose.yml` and test fixtures. No real secrets.
 - No `NEXT_PUBLIC_` secret. `src/server/**` files import `server-only`. After `npm run build`, grep `.next/static` for the key and for `GEMINI`.
-- `.gitignore` covers `.env*`, the PDF and the dataset JSON. `git ls-files` shows none of them.
+- `.gitignore` covers `.env*` (except the two `.example` templates), the PDF and the dataset JSON. `git ls-files` shows none of them.
+
+**Database targets** (ADR-0006, ADR-0008)
+- The `prisma/db-target.ts` guards are intact:
+  - the seed and `db:verify` accept the dev DB only (the `DEV_DATABASE_HOST` Neon host, or local Docker dev);
+  - `prisma.config.ts` accepts the dev DB or the local test DB only, and refuses `--url`;
+  - a registered `DEV_DATABASE_HOST` can never be accepted as the test DB;
+  - the test harness accepts `bookleaf_test` with `NODE_ENV=test` and re-checks `current_database()` before truncating.
+- No code or script sets `PRISMA_ALLOW_REMOTE_DATABASE`, or bypasses a guard, without recorded owner approval.
+- Tests use synthetic fixtures only and never read the dataset JSON.
 
 **AI-specific**
 - Ticket text is delimited as untrusted data in prompts. There is no tool or function calling. The output is Zod-validated before use.
@@ -49,4 +58,4 @@ Review the code; don't assume. Findings must cite `file:line` and describe a con
 - AI errors never surface provider error bodies to clients.
 
 ## Output
-List findings grouped as **Critical / High / Medium / Low**. Each finding includes the file and line, the issue, the exploit or failure scenario, and a minimal fix. Then give a short "Verified OK" list of the checklist areas you confirmed. If asked to fix, make minimal changes, add a regression test per finding, and re-run `npm test`.
+List findings grouped as **Critical / High / Medium / Low**. Each finding includes the file and line, the issue, the exploit or failure scenario, and a minimal fix. Then give a short "Verified OK" list of the checklist areas you confirmed. If asked to fix, make minimal changes, add a regression test per finding, and run the standard checks from `CLAUDE.md`. Report in the `CLAUDE.md` completion-report format.

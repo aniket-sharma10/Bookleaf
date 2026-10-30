@@ -16,7 +16,9 @@ import { verifyDataset } from "./verify-dataset";
 if (existsSync(".env")) process.loadEnvFile(".env");
 
 async function main(): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL;
+  // The direct (non-pooled) URL when configured, as for migrations; locally
+  // only DATABASE_URL is set.
+  const databaseUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
   assertLocalDevDatabase(databaseUrl, { action: "verify" });
 
   const dataPath = resolve(process.env.SEED_DATA_PATH || DEFAULT_DATASET_PATH);

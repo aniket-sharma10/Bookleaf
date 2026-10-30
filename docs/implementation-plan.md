@@ -1,6 +1,6 @@
 # Implementation Plan
 
-Requirement IDs are defined in `docs/requirements.md`. The design is in `docs/architecture.md`. Implement **one task at a time** (see `.claude/skills/implement-task`). Update the status column when a task starts, finishes or is blocked.
+Requirement IDs are defined in `docs/requirements.md`. The design is in `docs/architecture.md`. Implement **one task at a time** (see `.claude/skills/implement-task`), following the rules in `CLAUDE.md`. Update the status column when a task starts, finishes or is blocked.
 
 Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 
@@ -15,7 +15,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T1.5 | Initial schema and migration | T1.4 | done |
 | T1.6 | Seed exact dataset (authors, books) | T1.5 | done |
 | T1.7 | Guarded test-DB harness and seed verification | T1.6 | done |
-| T1.8 | Early deployment spike (recommended) | T1.7 | todo |
+| T1.8 | Neon development database | T1.7 | done |
 | T2.1 | HTTP foundation: errors, `withApi`, validation | T1.3 | todo |
 | T2.2 | Password hashing and user seeding | T1.7 | todo |
 | T2.3 | JWT sign/verify and cookie helpers | T1.3 | todo |
@@ -56,7 +56,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T7.4 | Production deployment and seed | T7.2, T7.3 | todo |
 | T7.5 | README and API documentation | T7.4 | todo |
 | T7.6 | One-page write-up | T7.5 | todo |
-| T7.7 | Submission | T7.6 | todo |
+| T7.7 | Handover | T7.6 | todo |
 
 Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T1.3. T3.1, T5.1 and T5.2 do not depend on the UI, and can be pulled forward if a session has spare time.
 
@@ -201,14 +201,20 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
     - Tests no longer seed the real JSON; the original plan did.
     - `db:verify` lives in `prisma/verify.ts`, not `scripts/verify-seed.ts`.
 
-### T1.8 Early deployment spike (recommended)
-- **Reqs:** DEL-03 (de-risking)
+### T1.8 Neon development database
+- **Reqs:** DATA-01 (dataset in the development database)
 - **Prereqs:** T1.7
-- **Scope:** create the hosted production DB (Neon; separate from both local DBs) and the Vercel project (repo connected). Set env vars. Run `migrate deploy` in the build. Seed from local and run `db:verify` against production. Deploy the placeholder page.
-- **Acceptance:** the live URL serves the page, and `db:verify` passes against the production DB.
-- **Blockers:** needs Vercel and Neon accounts, and production env vars (`DATABASE_URL`, `AUTH_JWT_SECRET`, `GEMINI_API_KEY`) set only in Vercel. The Vercel build environment also needs `PRISMA_ALLOW_REMOTE_DATABASE=true` (ADR-0008).
-- **Prerequisite design step:** `db:seed` and `db:verify` refuse every database except local dev. Seeding and verifying production needs an explicit, reviewed override, which must be designed and approved here, not improvised.
-- **Why early:** a Prisma 7 adapter, pooled-URL or build problem found on the last day is the biggest schedule risk.
+- **Scope** (rescoped on 2026-10-31 by the owner: development uses Neon; deployment is deferred to T7.4):
+  - **Guards** (`prisma/db-target.ts`): accept the Neon dev database's exact host when registered in `DEV_DATABASE_HOST`. The test-database guards are unchanged.
+  - **Seed and `db:verify`:** connect with `DIRECT_URL || DATABASE_URL`.
+  - **Docs:** `.env.example`, the README setup steps, and notes in the architecture doc and ADRs.
+  - **Neon operations, each approved by the owner:** `prisma migrate status`, then `prisma migrate deploy`, then `npm run db:seed`, then `npm run db:verify`. Never `migrate dev` or `migrate reset`.
+- **Acceptance:** Neon has the `init` migration applied, and `db:verify` reports an exact match. Standard checks pass. The local test workflow is unchanged.
+- **Outcome (2026-10-31):**
+  - Neon dev (`neondb`): migration applied, 10 authors and 18 books seeded, `db:verify` exact match. All four operations were approved by the owner.
+  - Guards: registered host accepted. Unregistered hosts, the test DB as a seed target, and a local address used as `DEV_DATABASE_HOST` are all refused. Tests: 65/65 pass. Lint, typecheck, format and build pass.
+  - Owner gave standing approval for routine non-destructive Neon use (recorded in `CLAUDE.md`).
+  - Minor: pg prints an SSL-mode notice for `sslmode=require`. Behaviour is already the strictest mode; set `sslmode=verify-full` in `.env` to silence it.
 
 ---
 
@@ -521,6 +527,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Reqs:** DEL-03, DEL-04
 - **Prereqs:** T7.2, T7.3
 - **Scope:** set production env vars, `migrate deploy`, seed from local, run `db:verify` against production, then re-run the T7.3 checklist on the live URL. Note the AI quota.
+  - Moved here from the original T1.8:
+    - Use a separate Neon project for production, never the dev one.
+    - The Vercel build needs `PRISMA_ALLOW_REMOTE_DATABASE=true` (ADR-0008).
+    - `db:seed` and `db:verify` accept only the dev database, so seeding and verifying production needs a small, explicit, owner-approved path.
+  - Every hosted operation needs the owner's approval.
 - **Verify:** the live checklist passes.
 
 ### T7.5 README and API documentation
@@ -534,10 +545,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Prereqs:** T7.5
 - **Scope:** `docs/write-up.md` covers priorities, trade-offs and the production evolution (job queue, SSE or pub/sub, rate limiting, attachments via object storage, AI evaluation set and feedback loop, observability). At most about 500 words.
 
-### T7.7 Submission
+### T7.7 Handover
 - **Reqs:** DEL-01, DEL-02
 - **Prereqs:** T7.6
-- **Scope:** confirm that no confidential files or verbatim brief text are committed (the repo is public per HR), add the reviewer collaborator (email pending from BookLeaf), review the commit history, and check that the README live URL works from an incognito window.
+- **Scope:** confirm that no confidential files or verbatim brief text are committed (the repo is public), grant BookLeaf collaborator access (address pending), review the commit history, and check that the README live URL works from an incognito window.
 
 ---
 
@@ -557,13 +568,13 @@ These are not required and should only be picked up if mandatory work is complet
 
 **Smallest viable end-to-end milestone.** Author login → create ticket → admin sees it in the queue → admin sends a manual reply → the author sees it after a refresh. The path is: Phase 1, Phase 2, T3.1, T3.4, T3.5, T3.7, T4.1, T4.2, T4.6 and a minimal T4.8. This proves auth, ownership, the data model and the API conventions before any AI work. Every later task adds to a working system.
 
-**Deferrable without violating mandatory requirements.** Everything in the deferred backlog, plus the recommended items: BOOK-06/07 polish, QUEUE-05 pagination, RT-02 admin polling, the T5.7 safety post-check (the prompt guardrails and human review remain), T5.9 (but the README must still evidence the AI design), and T1.8 (folded into T7.4). Do **not** defer AI classification, drafting, graceful degradation, polling on the author view, or API docs. These are mandatory and carry the most evaluation weight.
+**Deferrable without violating mandatory requirements.** Everything in the deferred backlog, plus the recommended items: BOOK-06/07 polish, QUEUE-05 pagination, RT-02 admin polling, the T5.7 safety post-check (the prompt guardrails and human review remain), T5.9 (but the README must still evidence the AI design), and early deployment (now part of T7.4). Do **not** defer AI classification, drafting, graceful degradation, polling on the author view, or API docs. These are mandatory and are the product's core.
 
 **Highest-risk requirements and early validation.**
 
 | Risk | Early validation |
 |---|---|
-| Deployment friction (Prisma 7 adapter, pooled URLs, env) | T1.8 deploys the skeleton and seed in Phase 1 |
+| Deployment friction (Prisma 7 adapter, pooled URLs, env) | Partly de-risked in T1.8: the app's database layer runs against Neon in development. Hosting is still verified only in T7.4. |
 | Gemini availability, model IDs, rate limits, structured-output fields | T5.1 smoke call as soon as a key exists. It can run right after T1.5, in parallel with Phases 2–4 if needed |
 | Cross-author data leaks | Ownership tests inside every endpoint task, plus the T2.7 route matrix that fails on unlisted routes |
 | AI hallucinating facts or claiming completed actions | Allow-listed context (T5.5), structured `commitments` (T5.6), post-check (T5.7), eval (T5.9) |
@@ -572,8 +583,8 @@ These are not required and should only be picked up if mandatory work is complet
 
 **Local development workflow.**
 1. `docker compose up -d` (starts only the `bookleaf-*` containers), then `npm run dev`.
-2. Work task by task with `/implement-task <ID>`: check prerequisites, implement, run `npm test` and `npm run lint`, then update this board.
-3. Make one commit per task, with a message that references the task ID.
+2. Work task by task (ask in plain language, e.g. "implement T2.1"; the `implement-task` skill applies). Check prerequisites, implement, run the standard checks from `CLAUDE.md`, update this board, then stop for the owner's review.
+3. One commit per task, with a message that references the task ID. The owner commits, or Claude does only when explicitly asked; Claude never stages, commits or pushes on its own.
 4. Use the real Gemini key only for manual checks and `ai-eval`. All tests use fakes.
 
 **Keeping to a few focused sessions** (grouping, not estimates):

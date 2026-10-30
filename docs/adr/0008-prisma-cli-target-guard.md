@@ -18,7 +18,9 @@ ADR-0006 left an open gap: only the seed checked its target, while Prisma CLI co
 ## Decision
 - **One guard for every CLI command.** `prisma.config.ts` calls `assertPrismaCliTarget({ url, argv, allowRemote })` before exporting the config, so it runs for every Prisma CLI command:
   - **No URL** (e.g. `prisma generate`): allowed.
-  - **Otherwise:** the URL must be exactly the local dev database (`127.0.0.1`/`localhost`/`[::1]`, port `55432`, `bookleaf_dev`) or the local test database (`55433`, `bookleaf_test`).
+  - **Otherwise:** the URL must be the dev database or the local test database (`55433`, `bookleaf_test`). The dev database is either:
+    - the local Docker dev database (`127.0.0.1`/`localhost`/`[::1]`, port `55432`, `bookleaf_dev`), or
+    - the hosted Neon development database whose exact host is registered in `DEV_DATABASE_HOST`. A local address is never accepted as that host.
   - **`--url`** (both `--url=` and `--url <value>`) is refused, because it would bypass the check.
   - **Opt-in:** `PRISMA_ALLOW_REMOTE_DATABASE=true` (exactly `true`) skips the guard for a deliberate remote operation. It is meant to be set per command, never exported for a whole shell session.
 - **The test harness adds its own guard.** `resetTestDatabase()` in `tests/helpers/test-database.ts`:
@@ -27,7 +29,7 @@ ADR-0006 left an open gap: only the seed checked its target, while Prisma CLI co
   3. only then runs `prisma migrate reset --force`.
 
   `truncateAllTables()` re-checks `current_database()` on the live connection before truncating.
-- **The seed and `db:verify` keep their stricter, dev-only guard,** shared through the same module. Their rules are unchanged.
+- **The seed and `db:verify` keep their stricter, dev-only guard,** shared through the same module. They connect with `DIRECT_URL || DATABASE_URL`, as the CLI does.
 
 ## Rationale
 - `prisma.config.ts` is the single place every Prisma CLI command passes through. A guard there protects raw `npx prisma …` commands too, not just npm scripts.
@@ -47,3 +49,7 @@ ADR-0006 left an open gap: only the seed checked its target, while Prisma CLI co
   - A future Prisma flag that overrides the URL under another name would not be caught. Tests cover today's `--url` forms only.
 - **The AI-agent consent prompt.** When an AI agent runs the suite, Prisma's own check requires the owner's consent text for `migrate reset`. Whether it ever triggers for a person running `npm test` was not verified.
 - **`npm test` now needs the `bookleaf-db-test` container running** (`npm run db:up`), because the suite resets that database before any test runs.
+
+## History
+- **2026-10-31 (T1.8):** the owner decided that development uses a Neon database. The guards now also accept the dev database's exact host when it's registered in `DEV_DATABASE_HOST`. The seed and `db:verify` switched to `DIRECT_URL || DATABASE_URL`. Everything else is unchanged: the test-database guards, the `--url` refusal and the opt-in. Status remains Proposed.
+

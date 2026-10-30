@@ -1,6 +1,6 @@
 # 0006. Isolated local databases and write-target guards
 
-- **Status:** Accepted. Separate dev and test databases, project-namespaced Docker resources and a production database kept separate were the owner's instructions (2026-10-30). The guard details were implemented under that instruction.
+- **Status:** Accepted. The development-database part was amended on 2026-10-31 (see History). Separate dev and test databases, project-namespaced Docker resources and a production database kept separate were the owner's instructions (2026-10-30). The guard details were implemented under that instruction.
 - **Date:** 2026-10-30 (retrospective)
 - **Implementation:** implemented.
   - `docker-compose.yml` (T1.4).
@@ -40,6 +40,7 @@
 - **Seeding production will need a deliberate change.** The guard blocks every database except local dev, so seeding the hosted database (T1.8, T7.4) needs an explicit, reviewed override.
 
 ## History
+- **2026-10-31 (T1.8):** amended by the owner's decision to use a Neon database for **development** (see ADR-0008). The local Docker dev database is now an optional fallback. The test database and its isolation are unchanged.
 - **2026-10-31 (T1.7):** factual updates, decision unchanged.
   - The Implementation line now covers the test-database guard and the Prisma CLI guard.
   - The seed guard moved from `prisma/seed-target.ts` into the shared `prisma/db-target.ts`, with the same rules.

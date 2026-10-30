@@ -6,7 +6,7 @@
 - **Requirements:** AI-01–09, DRAFT-01–09, TICKET-05, MGMT-04
 
 ## Context
-AI quality is the highest-weighted criterion (25%). The evaluation covers prompt design, KB usage, classification accuracy, graceful degradation and cost awareness. The AI must be grounded in real data, must never claim actions that did not happen, and must never block ticket creation or manual replies. The Knowledge Base is small: a handful of short policy sections. The brief names Gemini as the starting provider, and the assignment allows any provider if the choice is justified.
+AI quality is central to the product: prompt design, Knowledge Base usage, classification accuracy, graceful degradation and cost awareness all matter. The AI must be grounded in real data, must never claim actions that did not happen, and must never block ticket creation or manual replies. The Knowledge Base is small: a handful of short policy sections. The brief names Gemini as the starting provider, and the brief allows any provider if the choice is justified.
 
 ## Decision
 1. **Provider boundary.** A `StructuredGenerator` interface is implemented by a single `gemini.ts` adapter (`@google/genai`). Prompts, schemas and business logic are provider-agnostic, and tests use a fake implementation.
@@ -24,12 +24,12 @@ AI quality is the highest-weighted criterion (25%). The evaluation covers prompt
 
 ## Rationale
 - The owner's brief named Gemini as the starting provider, subject to availability and rate limits.
-- The assignment weights graceful degradation and cost-consciousness explicitly. That drives two choices: AI runs only after the ticket has been saved, and the cheaper of two models handles classification.
+- The brief calls out graceful degradation and cost-consciousness explicitly. That drives two choices: AI runs only after the ticket has been saved, and the cheaper of two models handles classification.
 - The owner's requirements state that the AI must not claim actions it cannot verify, which drives the `commitments` and `needsVerification` split.
 - Structured, validated output turns "the model said something odd" into a typed failure that the app can handle.
 
 ## Alternatives considered
-- **OpenAI gpt-4o-mini or Claude Haiku.** These are equally suitable, and the assignment suggests them as cheap options. Gemini is preferred for its free tier and native JSON-schema output. The boundary keeps a switch to a one-file change.
+- **OpenAI gpt-4o-mini or Claude Haiku.** These are equally suitable, and the brief suggests them as cheap options. Gemini is preferred for its free tier and native JSON-schema output. The boundary keeps a switch to a one-file change.
 - **Embedding/vector retrieval over the KB.** Unjustified for a handful of short sections. Category-keyed selection is deterministic, testable and cheaper.
 - **Synchronous classification inside the create request.** Simpler, but it adds LLM latency to author submission and couples creation to AI uptime.
 - **Pre-generating drafts at ticket creation.** This spends tokens on tickets that may be closed or answered manually. It is also not what the spec describes ("when an admin opens a ticket").
