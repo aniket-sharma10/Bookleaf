@@ -28,3 +28,6 @@ src/generated/
 .pnp
 .pnp.*
 .claude/settings.local.json
+
+# personal learning files
+docs/learning-notes/

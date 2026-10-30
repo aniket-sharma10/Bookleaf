@@ -37,7 +37,9 @@ Next.js app ─ proxy.ts: JWT check → redirect for /author, /admin (UX only)
 prisma/
   schema.prisma            # data model (§3)
   migrations/
-  seed.ts                  # exact dataset import + demo users (idempotent)
+  seed.ts                  # CLI entry: dev-DB guard → read + validate dataset → upsert (idempotent)
+  dataset.ts               # strict Zod schema of the JSON, parseDataset(), seedDataset() (one transaction)
+  seed-target.ts           # refuses any database except 127.0.0.1:55432/bookleaf_dev
 prisma.config.ts           # Prisma 7 config (datasource URL, seed command)
 docker-compose.yml         # project "bookleaf": bookleaf-db-dev + bookleaf-db-test (Postgres 16)
 scripts/

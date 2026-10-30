@@ -15,7 +15,8 @@ Local databases run in Docker (Compose project `bookleaf`, Postgres 16):
 cp .env.example .env    # local-dev values; never commit .env
 npm install             # also runs `prisma generate` (postinstall)
 npm run db:up           # start both databases and wait until healthy
-npx prisma migrate status   # confirms Prisma can reach bookleaf_dev
+npx prisma migrate dev      # apply migrations to bookleaf_dev
+npm run db:seed             # load the supplied authors/books (needs bookleaf_sample_data.json in the project root, or SEED_DATA_PATH)
 npm run dev        # http://localhost:3000
 npm run lint       # ESLint (eslint-config-next)
 npm run typecheck  # next typegen + tsc --noEmit (strict)

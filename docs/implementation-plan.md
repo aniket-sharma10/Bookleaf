@@ -13,7 +13,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T1.3 | Env validation and secret hygiene | T1.2 | done |
 | T1.4 | Local dev/test Postgres (Docker) and Prisma client | T1.3 | done |
 | T1.5 | Initial schema and migration | T1.4 | done |
-| T1.6 | Seed exact dataset (authors, books) | T1.5 | todo |
+| T1.6 | Seed exact dataset (authors, books) | T1.5 | done |
 | T1.7 | Guarded test-DB harness and seed verification | T1.6 | todo |
 | T1.8 | Early deployment spike (recommended) | T1.7 | todo |
 | T2.1 | HTTP foundation: errors, `withApi`, validation | T1.3 | todo |
@@ -154,6 +154,20 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Acceptance:** running the seed twice leaves exactly 10 authors and 18 books. Nulls stay null. ISBNs and titles are byte-identical.
 - **Verify:** run the seed twice and check counts with `psql`.
 - **Blocker:** the JSON must be present locally (it is git-ignored).
+- **Outcome (2026-10-30):**
+  - **Code layout:** the seed code lives in `prisma/`, not `src/server/`, because it runs as a CLI where `server-only` would throw.
+    - `prisma/dataset.ts`: strict Zod schema (rejects unknown or missing keys, wrong types, bad dates, duplicate IDs, emails or ISBNs), `parseDataset()` and `seedDataset()`.
+    - `seedDataset()` upserts every author and book by dataset ID in one transaction, mapping snake_case to camelCase only.
+    - `prisma/seed-target.ts`: refuses any target except `localhost`/`127.0.0.1:55432/bookleaf_dev`, and refuses when `NODE_ENV=production`.
+  - **Running it:** `prisma/seed.ts` is registered as `migrations.seed` and run with `npm run db:seed`. Added dev dependency `tsx`.
+  - **Logging:** counts only. Errors name paths and rules, never values. Prisma query errors report the code only.
+  - **Verified:**
+    - Seeded twice (and a third time): 10 authors and 18 books each time, no duplicates.
+    - A field-by-field comparison of all 348 values against the JSON found 0 mismatches. This covers nulls, the 2 empty `available_on` arrays, the production statuses, zero payouts, all royalty values and the non-ASCII title.
+    - The CLI exits 1 with a safe message for a missing file, invalid JSON, a wrong shape, the test DB, a hosted URL, `NODE_ENV=production`, wrong credentials (P1000) and an unreachable DB (P1001).
+    - A forced unique conflict (P2002) rolled back all earlier upserts.
+    - `bookleaf_test` was unchanged (0 tables, 0 tuple writes).
+    - 18 new unit tests in `tests/seed.test.ts`.
 
 ### T1.7 Test DB harness and seed verification
 - **Reqs:** DATA-01, DATA-02, DEL-08
@@ -161,8 +175,8 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:**
   - **Env:** `.env.test` (git-ignored) plus a committed `.env.test.example`. Vitest loads `.env.test` only.
   - **Guard:** `tests/helpers/assert-test-db.ts` aborts before any DB access unless `NODE_ENV=test` and the URL is `localhost`/`127.0.0.1:55433/bookleaf_test`.
-  - **Setup:** Vitest `globalSetup` runs the guard, then `prisma migrate reset --force` and the seed.
-  - **Verification:** `src/server/seed/verify.ts` exports `verifySeed(prisma, json)`, which compares every field of every record with the local JSON (counts, IDs, nulls, empty `available_on`, exact strings and numbers). `scripts/verify-seed.ts` (`npm run db:verify`) and an integration test both call it.
+  - **Setup:** Vitest `globalSetup` runs the guard, then `prisma migrate reset --force`, then seeds by calling `seedDataset()` directly. The `db:seed` CLI deliberately refuses every database except `bookleaf_dev`.
+  - **Verification:** `prisma/verify-dataset.ts` (next to `prisma/dataset.ts`, reusing `parseDataset`; kept out of `src/server` for the same `server-only` reason as the seed) exports `verifySeed(prisma, json)`, which compares every field of every record with the local JSON (counts, IDs, nulls, empty `available_on`, exact strings and numbers). `scripts/verify-seed.ts` (`npm run db:verify`) and an integration test both call it.
   - **Edge-case assertions:** in-production books, zero-paid books and below-threshold authors are checked, with expected values **derived from the JSON at runtime**. Dataset values are not hard-coded, because the repo is public.
 - **Acceptance:** `npm test` passes, including the verification against the real test DB.
 - **Verify:**

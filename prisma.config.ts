@@ -11,6 +11,8 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    // Runs only via `prisma db seed` (Prisma 7 never seeds automatically).
+    seed: "tsx prisma/seed.ts",
   },
   datasource: {
     // Migrations use the direct (non-pooled) URL when one is configured, as the
