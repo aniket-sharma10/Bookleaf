@@ -2,10 +2,11 @@
 
 - **Status:** Accepted (owner, 2026-10-30). The exact Gemini model IDs are still open and will be confirmed in T5.1.
 - **Date:** 2026-10-27
+- **Implementation:** partial. Only the persistence side exists: the `AiDraft` and `AiCallLog` tables, and the AI fields on `Ticket` (T1.5). `GEMINI_*` variables are defined in `src/server/env.ts`. No provider, prompt, KB module or classification code yet (Phase 5).
 - **Requirements:** AI-01–09, DRAFT-01–09, TICKET-05, MGMT-04
 
 ## Context
-AI quality is the highest-weighted criterion (25%). The evaluation covers prompt design, KB usage, classification accuracy, graceful degradation and cost awareness. The AI must be grounded in real data, must never claim actions that did not happen, and must never block ticket creation or manual replies. The KB is small (about 1.5k tokens, 7 sections). The brief names Gemini as the starting provider, and the assignment allows any provider if the choice is justified.
+AI quality is the highest-weighted criterion (25%). The evaluation covers prompt design, KB usage, classification accuracy, graceful degradation and cost awareness. The AI must be grounded in real data, must never claim actions that did not happen, and must never block ticket creation or manual replies. The Knowledge Base is small: a handful of short policy sections. The brief names Gemini as the starting provider, and the assignment allows any provider if the choice is justified.
 
 ## Decision
 1. **Provider boundary.** A `StructuredGenerator` interface is implemented by a single `gemini.ts` adapter (`@google/genai`). Prompts, schemas and business logic are provider-agnostic, and tests use a fake implementation.
@@ -21,6 +22,12 @@ AI quality is the highest-weighted criterion (25%). The evaluation covers prompt
 6. **Degradation.** Typed `AiError` kinds are `TIMEOUT`, `RATE_LIMITED`, `INVALID_OUTPUT`, `PROVIDER_ERROR` and `DISABLED`. Classification failure leaves the ticket "Needs triage" with manual override and retry available. Draft failure returns 503 `AI_UNAVAILABLE` and the manual composer still works. There is at most one retry, and only for transient provider errors.
 7. **Observability.** `AiCallLog` records the model, outcome, token counts and latency per call, without prompt text.
 
+## Rationale
+- The owner's brief named Gemini as the starting provider, subject to availability and rate limits.
+- The assignment weights graceful degradation and cost-consciousness explicitly. That drives two choices: AI runs only after the ticket has been saved, and the cheaper of two models handles classification.
+- The owner's requirements state that the AI must not claim actions it cannot verify, which drives the `commitments` and `needsVerification` split.
+- Structured, validated output turns "the model said something odd" into a typed failure that the app can handle.
+
 ## Alternatives considered
 - **OpenAI gpt-4o-mini or Claude Haiku.** These are equally suitable, and the assignment suggests them as cheap options. Gemini is preferred for its free tier and native JSON-schema output. The boundary keeps a switch to a one-file change.
 - **Embedding/vector retrieval over the KB.** Unjustified for a handful of short sections. Category-keyed selection is deterministic, testable and cheaper.
@@ -33,3 +40,7 @@ AI quality is the highest-weighted criterion (25%). The evaluation covers prompt
 - Background classification can be lost if the serverless instance dies. Retry in the UI mitigates this, and a durable queue is the production path.
 - The priority rubric is our assumption (the PDF gives only examples). It is calibrated with `scripts/ai-eval.ts` and documented.
 - **Open questions:** current Gemini model IDs, free-tier rate limits, and whether `responseJsonSchema` is still the preferred config field. All are to be verified in T5.1.
+
+## History
+- **2026-10-30:** the KB-size wording was changed from a token estimate to "a handful of short sections", because the KB module is not built yet. The KB module, now a structured summary rather than a verbatim copy of the brief, and the rule against claiming completed actions were refined on the owner's instruction before acceptance.
+- **2026-10-31:** added the **Implementation** and **Rationale** sections (documentation-format update). The decision is unchanged. The rationale was drawn from the owner's recorded instructions and the existing text.

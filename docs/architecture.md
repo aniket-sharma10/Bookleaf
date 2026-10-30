@@ -103,17 +103,13 @@ Prisma models (PostgreSQL). Money is stored as `Int` (whole rupees, exactly as s
 
 Enums: `Role`, `TicketStatus`, `TicketCategory`, `TicketPriority` (declared `CRITICAL, HIGH, MEDIUM, LOW` so that Postgres enum ordering sorts Critical first), `ClassificationStatus`, `AiCallKind`, `AiCallOutcome`.
 
-Design notes:
-- **Dataset IDs are used as primary keys** for Author and Book. This keeps them traceable to the JSON and makes seed upserts trivial.
-- **User is separate from Author.** Author is business data and User is credentials and role, so a single login path serves both roles. Admins have no Author row.
-- **Book ownership on tickets** is enforced in the service layer and tested. A composite FK `(bookId, authorId) → Book(id, authorId)` would add a database-level guarantee. It is optional hardening, only if Prisma accepts the optional composite relation cleanly.
-- **Effective vs AI values.** `category`/`priority` hold the effective values and `aiCategory`/`aiPriority` hold the model's original suggestion, so "overridden" can be derived. The AI writes effective values only with `updateMany({ where: { id, category: null } })`, so it never overwrites an admin choice.
-- Book `status` is stored as text, not an enum, because the source values are free text and must round-trip exactly.
-- **Delete rules:**
-  - Dataset records (Author, Book) and users referenced by content use `Restrict`, so history can't silently disappear.
-  - Ticket children (messages, notes, drafts) use `Cascade`.
-  - Optional links (assignee, a message's AI draft, an AI log's ticket) use `SetNull`.
-- Table and column names are Prisma's defaults (PascalCase tables, camelCase columns). The CHECK constraint is hand-written SQL in the `init` migration; Prisma ignores it when diffing, so there is no drift.
+Design rules (rationale in **ADR-0005**):
+- Author and Book use dataset IDs as primary keys. Values are stored verbatim.
+- User is separate from Author. A CHECK constraint (hand-written SQL in the `init` migration) ties `role` to `authorId`.
+- `category`/`priority` are the effective values; `aiCategory`/`aiPriority` keep the model's suggestion. AI writes effective values only while they are null: `updateMany({ where: { id, category: null } })`.
+- Book ownership on tickets is enforced in the service layer. A composite FK is optional, deferred hardening.
+- Delete rules: `Restrict` for dataset records and for users that content refers to; `Cascade` from a ticket to its children; `SetNull` for optional links.
+- Table and column names are Prisma's defaults: PascalCase tables, camelCase columns.
 
 ## 4. REST API
 
@@ -261,19 +257,13 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 | `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` | seed only | for seeding | Demo credentials are documented in the README |
 | `SEED_DATA_PATH` | seed only | no | Default `./bookleaf_sample_data.json` |
 
-`server/env.ts` imports `server-only` and validates variables with Zod on first use.
-- Every variable is optional but must be valid if set. The app therefore never fails at startup because a not-yet-used integration (for example Gemini) is unconfigured.
-- A feature that needs a value calls `requireEnv(name)`, which throws a clear error naming the missing variable.
-- Validation errors list variable names and rules only, never values.
-- No variable is prefixed `NEXT_PUBLIC_`, and nothing secret reaches the client.
-- Vitest aliases `server-only` to its no-op build, because tests run without Next's `react-server` condition.
-- Node scripts that run outside Next (seed, verification) must either not import `server/*` modules or run Node with `--conditions=react-server`.
-- `prisma.config.ts` is the one exception to "read env only via `server/env.ts`". It runs inside the Prisma CLI, so it loads `.env` with Node's `process.loadEnvFile()` and reads `process.env` directly.
-  - Migrations use `DIRECT_URL || DATABASE_URL`: the hosted DB's non-pooled URL in production, and the local URL in development.
-  - The app's runtime client (`server/db.ts`, `getDb()`, Prisma `PrismaPg` adapter) always uses `DATABASE_URL`.
-  - If neither variable is set, the URL is left undefined, so `prisma generate` (the npm `postinstall` script) still works on a fresh clone.
+**Environment access** (rationale in **ADR-0007**):
+- App code reads configuration only through `server/env.ts`: `getEnv()` and `requireEnv(name)`. That file is server-only.
+- All variables are optional but validated if set. Nothing uses a `NEXT_PUBLIC_` prefix.
+- The CLI entry points `prisma.config.ts` and `prisma/seed.ts` cannot import server-only modules. They load `.env` with `process.loadEnvFile()` and read `process.env` directly.
+- Migrations use `DIRECT_URL || DATABASE_URL`. The app's runtime client (`getDb()`) always uses `DATABASE_URL`.
 
-**Local databases (Docker Compose).** The compose file sets `name: bookleaf`, so every resource is namespaced and cannot collide with other projects' Postgres containers or volumes on the same machine. It uses the stock `postgres:16-alpine` image; there is no custom image to build.
+**Local databases (Docker Compose).** Rationale and the guards are in **ADR-0006**. The compose file sets `name: bookleaf`, so every resource is namespaced and cannot collide with other projects' Postgres containers or volumes on the same machine. It uses the stock `postgres:16-alpine` image; there is no custom image to build.
 
 | Service | Container | Host port | Database | Storage |
 |---|---|---|---|---|

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted (decided by the project owner, 2026-10-30; replaces the earlier *proposed* database-session design, which was never accepted)
 - **Date:** 2026-10-30
+- **Implementation:** not started (T2.1–T2.7). `AUTH_JWT_SECRET` is already defined in `src/server/env.ts`; `bcryptjs` and `jose` are not installed yet.
 - **Requirements:** AUTH-01–08, API-05
 
 ## Context
@@ -26,6 +27,12 @@
 - **Logout** clears the cookie.
 - **CSRF:** SameSite=Lax, plus an Origin check on mutating requests.
 
+## Rationale
+- The owner chose this approach explicitly: simple email/password auth (which the assignment permits), kept "straightforward, secure, and testable".
+- An HttpOnly cookie keeps the token out of reach of client JavaScript, so an XSS bug cannot read it.
+- A stateless token needs no session table and no DB lookup per request.
+- Verification is one pure function, which makes it easy to unit-test.
+
 ## Alternatives considered
 - **Database-backed opaque sessions.** These allow real server-side logout and revocation, at the cost of a Session table and a DB lookup per request. They were the earlier proposal; the owner chose the stateless approach for simplicity.
 - **Auth.js, Better Auth or another provider.** More configuration and abstraction than two-role credentials login needs, and authorization would still be hand-written.
@@ -38,5 +45,11 @@
 - **Secret management:**
   - `AUTH_JWT_SECRET` must be strong and different per environment.
   - Rotating it signs everyone out.
-  - It is validated at startup by `server/env.ts`.
+  - It is format-checked by `server/env.ts` when first read and fetched with `requireEnv`, so a missing secret fails at the first auth operation, not at boot (ADR-0007).
 - **Out of scope:** password reset, email verification and login rate limiting. They are documented as limitations.
+
+## History
+- **2026-10-27:** this ADR number was first used for a *proposed* design: hand-rolled, database-backed opaque sessions (hashed tokens in a `Session` table). It was never accepted or committed.
+- **2026-10-30:** the owner decided on the JWT-cookie approach, and the proposal was rewritten in place before the repository's first docs commit. The original text is therefore not in git history. Its substance survives as the first alternative above.
+- **2026-10-30:** corrected the secret-validation consequence, which had said "validated at startup", to match ADR-0007.
+- **2026-10-31:** added the **Implementation** and **Rationale** sections (documentation-format update). The decision is unchanged. The rationale was drawn from the owner's recorded instructions and the existing text.

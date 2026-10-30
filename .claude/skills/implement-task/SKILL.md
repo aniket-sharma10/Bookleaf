@@ -27,10 +27,12 @@ Run `npm run lint`, `npm run typecheck` and `npm test`. Add `npm run build` if t
 
 ## 5. Close out
 - Board status: `done` only if every acceptance criterion is verified. Otherwise `blocked` with a one-line reason.
-- Update `docs/architecture.md` or `docs/api.md` if what you built differs from, or adds to, what they describe.
-- Report:
+- Update `docs/architecture.md` or `docs/api.md` if what you built differs from, or adds to, what they describe. Add or update an ADR if a significant decision was made (see CLAUDE.md "Decisions and documentation"), and update the relevant `docs/learning-notes/` file for what was implemented.
+- Report in the CLAUDE.md "Task completion report" format, which includes:
   - **Done:** each acceptance criterion and how it was verified (command output summary or manual check).
   - **Not done / deviations:** anything skipped or changed, and why.
   - **Trade-offs:** any non-obvious choice, in 1–2 plain sentences the owner can repeat in an interview.
+  - **Implementation walkthrough:** the flow through the changed code (files, key functions, order).
+  - **Decisions:** existing decisions applied, kept separate from new decisions introduced (with where each is recorded).
   - **Next:** the next unblocked task ID(s).
 - Don't commit unless asked. If asked, use one commit for the task, with a message like `T3.4: ticket creation API`.

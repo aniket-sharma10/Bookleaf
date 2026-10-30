@@ -2,6 +2,7 @@
 
 - **Status:** Accepted (owner, 2026-10-30)
 - **Date:** 2026-10-27
+- **Implementation:** not started (T6.1). SWR is not installed yet.
 - **Requirements:** RT-01, RT-02
 
 ## Context
@@ -15,6 +16,11 @@ Client-side polling with SWR `refreshInterval`:
 
 Polling pauses while the tab is hidden and revalidates on focus. Responses are small JSON payloads from existing REST endpoints, so no new API surface is added. The admin reply composer keeps local state so that polling never overwrites text being edited.
 
+## Rationale
+- The assignment allows WebSockets, Server-Sent Events or polling, and only asks that updates feel responsive.
+- The owner confirmed polling is acceptable and asked to keep it.
+- Polling reuses the existing REST endpoints and needs no infrastructure that serverless hosting lacks.
+
 ## Alternatives considered
 - **Server-Sent Events.** True push, but on serverless each open stream holds a function invocation. Cross-instance fan-out needs Postgres LISTEN/NOTIFY over a persistent connection, or Redis.
 - **WebSockets.** Not supported by Vercel functions, and would need a separate server or a hosted service (Pusher, Ably, Supabase Realtime): extra infrastructure and secrets.
@@ -24,3 +30,6 @@ Polling pauses while the tab is hidden and revalidates on focus. Responses are s
 - Updates arrive within one interval (up to about 5 s for authors). This meets "near-real-time".
 - Load is predictable but scales with open tabs. The write-up names SSE with pub/sub as the production evolution.
 - No extra infrastructure, and it is easy to test and explain.
+
+## History
+- **2026-10-31:** added the **Implementation** and **Rationale** sections (documentation-format update). The decision is unchanged. The rationale was drawn from the owner's recorded instructions and the existing text.
