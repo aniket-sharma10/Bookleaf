@@ -3,7 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BookLeaf Author Support",
-  description: "Author support and communication portal for BookLeaf Publishing",
+  description:
+    "Author support and communication portal for BookLeaf Publishing",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -11,6 +11,8 @@ Work in progress. The full README (setup, credentials, architecture, AI integrat
 npm install
 npm run dev        # http://localhost:3000
 npm run lint       # ESLint (eslint-config-next)
-npm run typecheck  # tsc --noEmit
+npm run typecheck  # next typegen + tsc --noEmit (strict)
+npm run format     # Prettier write (format:check to verify)
+npm test           # Vitest (test:watch for watch mode)
 npm run build      # production build
 ```

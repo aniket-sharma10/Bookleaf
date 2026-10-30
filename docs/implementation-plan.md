@@ -9,7 +9,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | ID | Title | Prereqs | Status |
 |---|---|---|---|
 | T1.1 | Scaffold Next.js app and scripts | — | done |
-| T1.2 | Strict TS, Prettier, Vitest baseline | T1.1 | todo |
+| T1.2 | Strict TS, Prettier, Vitest baseline | T1.1 | done |
 | T1.3 | Env validation and secret hygiene | T1.2 | todo |
 | T1.4 | Local dev/test Postgres (Docker) and Prisma client | T1.3 | todo |
 | T1.5 | Initial schema and migration | T1.4 | todo |
@@ -84,9 +84,14 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 ### T1.2 Strict TS, Prettier, Vitest baseline
 - **Reqs:** DEL-08
 - **Prereqs:** T1.1
-- **Scope:** `strict` plus `noUncheckedIndexedAccess`. Prettier with an ESLint-compatible config and `format` / `format:check` scripts. Vitest configured with path aliases (`vitest.config.ts`), a `test` script and one trivial passing test.
+- **Scope:** `strict` plus `noUncheckedIndexedAccess`. Prettier with an ESLint-compatible config and `format` / `format:check` scripts. Vitest configured with path aliases (`vitest.config.mts`), a `test` script and one trivial passing test.
 - **Acceptance:** `npm test` passes. `format:check` passes.
 - **Verify:** run the scripts. Deliberately break formatting once to confirm the check fails.
+- **Outcome (2026-10-30):**
+  - **Tooling:** Prettier 3 with default options. `eslint-config-prettier/flat` is the last ESLint config entry. Markdown and the lockfile are excluded from Prettier.
+  - **Vitest:** 4.1.12 rather than 5.x, because Vitest 5's `engines` field excludes Node 25, which is the owner's local version. Vitest 4 supports both Node 24 and 25. Vite 8 is installed explicitly as Vitest's required peer.
+  - **Config:** the `@` alias is set in `vitest.config.mts` (`.mts` avoids Vite's CommonJS-config warning).
+  - **Probes:** a badly formatted file fails `format:check`, `noUncheckedIndexedAccess` flags unchecked indexing, and a failing test makes `npm test` exit 1.
 
 ### T1.3 Env validation and secret hygiene
 - **Reqs:** AI-09, DEL-09
