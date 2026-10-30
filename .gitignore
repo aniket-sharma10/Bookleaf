@@ -1,0 +1,30 @@
+# Confidential assignment materials — never commit, even though the repo is public (see docs/requirements.md §15)
+/BookLeaf_Technical_Assignment_1.pdf
+/bookleaf_sample_data.json
+/*.pdf
+
+# Dependencies and build output
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Generated Prisma client
+src/generated/
+
+# Environment and secrets (only .env.example is committed)
+.env
+.env.*
+!.env.example
+
+# Platform / local tooling
+.vercel/
+.DS_Store
+*.log
+*.pem
+.pnp
+.pnp.*
+.claude/settings.local.json
