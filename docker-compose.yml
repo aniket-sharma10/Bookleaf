@@ -1,0 +1,46 @@
+# Local databases only. The production database is hosted separately (Neon).
+# The project name namespaces every container, volume and network as
+# "bookleaf-*" so nothing collides with other projects' Postgres instances.
+# The credentials below are throwaway local-dev values for containers bound to
+# 127.0.0.1; they are not secrets and are never used outside this machine.
+name: bookleaf
+
+services:
+  db-dev:
+    image: postgres:16-alpine
+    container_name: bookleaf-db-dev
+    environment:
+      POSTGRES_USER: bookleaf
+      POSTGRES_PASSWORD: bookleaf_local
+      POSTGRES_DB: bookleaf_dev
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - db-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookleaf -d bookleaf_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Disposable: data lives in memory and is wiped whenever the container restarts.
+  db-test:
+    image: postgres:16-alpine
+    container_name: bookleaf-db-test
+    environment:
+      POSTGRES_USER: bookleaf
+      POSTGRES_PASSWORD: bookleaf_local
+      POSTGRES_DB: bookleaf_test
+    ports:
+      - "127.0.0.1:55433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookleaf -d bookleaf_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  db-dev-data:
+    name: bookleaf-db-dev-data

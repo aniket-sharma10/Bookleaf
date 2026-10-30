@@ -23,7 +23,7 @@ A take-home assignment for BookLeaf Publishing (Full-Stack Developer). It is a w
 - The JWT lives only in the HttpOnly `bl_session` cookie (`SameSite=Lax`, `Secure` in production). Never put it in `localStorage`, a response body or a client-readable place. Logout clears the cookie.
 - Author-scoped code takes `authorId` from the verified token, never from the URL, query or body. Every author query filters by it. Another author's record returns 404.
 - Author responses use explicit `select` DTOs and never include internal notes, drafts, priority, AI fields or assignee.
-- Secrets are read only from `src/server/env.ts`. Never use a `NEXT_PUBLIC_` secret, never log keys, never commit `.env*` (except `.env.example`).
+- Secrets are read only from `src/server/env.ts` (the sole exception is `prisma.config.ts`, which runs in the Prisma CLI). Never use a `NEXT_PUBLIC_` secret, never log keys, never commit `.env*` (except `.env.example`).
 - Seed data must match the supplied JSON exactly. Never invent, "fix" or drop dataset records or fields. ISBNs are masked placeholders, so store them verbatim.
 - AI output is validated with Zod before use. It is grounded only in allow-listed verified facts and the KB. It never claims an action (escalation, re-sync, reprint, refund, payment) has happened unless the app records it was performed. It is never sent to an author without an explicit admin send.
 - AI failures must never block ticket creation, manual triage or manual replies.

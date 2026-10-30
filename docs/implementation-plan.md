@@ -11,7 +11,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T1.1 | Scaffold Next.js app and scripts | — | done |
 | T1.2 | Strict TS, Prettier, Vitest baseline | T1.1 | done |
 | T1.3 | Env validation and secret hygiene | T1.2 | done |
-| T1.4 | Local dev/test Postgres (Docker) and Prisma client | T1.3 | todo |
+| T1.4 | Local dev/test Postgres (Docker) and Prisma client | T1.3 | done |
 | T1.5 | Initial schema and migration | T1.4 | todo |
 | T1.6 | Seed exact dataset (authors, books) | T1.5 | todo |
 | T1.7 | Guarded test-DB harness and seed verification | T1.6 | todo |
@@ -119,6 +119,17 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - No other project's containers or volumes are touched.
   - `npx prisma migrate status` connects to `bookleaf_dev`.
 - **Verify:** manual commands. Record them in the README draft.
+- **Outcome (2026-10-30):**
+  - **Versions:** `prisma`, `@prisma/client` and `@prisma/adapter-pg` are pinned to exactly 7.10.1. The CLI's npm `latest` tag points to an 8.0 release candidate, so pinning keeps the three in lockstep.
+  - **`pg`:** not installed directly. The adapter depends on it, and our code never imports it.
+  - **Config:** `prisma.config.ts` loads `.env` with Node's built-in `process.loadEnvFile` (no `dotenv` dependency). `schema.prisma` contains only the generator and datasource; models arrive in T1.5.
+  - **Database client:** `getDb()` creates the Prisma client lazily, as a singleton on `globalThis`.
+  - **Scripts:** `postinstall` runs `prisma generate`. Added `db:up` and `db:down`. `engines` raised to `>=20.19.0` to match Prisma's minimum.
+  - **Verified:**
+    - Both containers are healthy, and only `bookleaf-*` resources were created (other projects untouched).
+    - `prisma generate` succeeds with no `.env`.
+    - `prisma migrate status` reaches `bookleaf_dev`.
+    - A throwaway probe ran a raw query through `getDb()` against `bookleaf_test`.
 
 ### T1.5 Initial schema and migration
 - **Reqs:** DATA-01, DATA-02, MGMT-02, AI-03, AI-04, AI-06, AUTH-08

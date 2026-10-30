@@ -1,0 +1,11 @@
+// Models, enums and indexes are added in T1.5 (see docs/architecture.md §3).
+// The connection URL lives in prisma.config.ts (Prisma 7).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

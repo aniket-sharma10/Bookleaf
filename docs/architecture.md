@@ -261,6 +261,10 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 - No variable is prefixed `NEXT_PUBLIC_`, and nothing secret reaches the client.
 - Vitest aliases `server-only` to its no-op build, because tests run without Next's `react-server` condition.
 - Node scripts that run outside Next (seed, verification) must either not import `server/*` modules or run Node with `--conditions=react-server`.
+- `prisma.config.ts` is the one exception to "read env only via `server/env.ts`". It runs inside the Prisma CLI, so it loads `.env` with Node's `process.loadEnvFile()` and reads `process.env` directly.
+  - Migrations use `DIRECT_URL || DATABASE_URL`: the hosted DB's non-pooled URL in production, and the local URL in development.
+  - The app's runtime client (`server/db.ts`, `getDb()`, Prisma `PrismaPg` adapter) always uses `DATABASE_URL`.
+  - If neither variable is set, the URL is left undefined, so `prisma generate` (the npm `postinstall` script) still works on a fresh clone.
 
 **Local databases (Docker Compose).** The compose file sets `name: bookleaf`, so every resource is namespaced and cannot collide with other projects' Postgres containers or volumes on the same machine. It uses the stock `postgres:16-alpine` image; there is no custom image to build.
 
