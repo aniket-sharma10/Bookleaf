@@ -1,5 +1,6 @@
-// Models, enums and indexes are added in T1.5 (see docs/architecture.md §3).
+// Data model: see docs/architecture.md §3.
 // The connection URL lives in prisma.config.ts (Prisma 7).
+// Money is whole rupees (Int), stored exactly as supplied by the dataset.
 
 generator client {
   provider = "prisma-client"
@@ -8,4 +9,233 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  AUTHOR
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketCategory {
+  ROYALTY_PAYMENTS
+  ISBN_METADATA
+  PRINTING_QUALITY
+  DISTRIBUTION_AVAILABILITY
+  BOOK_STATUS_PRODUCTION
+  GENERAL_INQUIRY
+}
+
+// Declaration order matters: Postgres sorts enum values in this order, so
+// `orderBy: { priority: "asc" }` puts CRITICAL first in the admin queue.
+enum TicketPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ClassificationStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum AiCallKind {
+  CLASSIFY
+  DRAFT
+}
+
+enum AiCallOutcome {
+  OK
+  TIMEOUT
+  RATE_LIMITED
+  INVALID_OUTPUT
+  PROVIDER_ERROR
+  DISABLED
+}
+
+// ---------------------------------------------------------------------------
+// Dataset records (seeded from the supplied JSON; IDs kept as supplied)
+// ---------------------------------------------------------------------------
+
+model Author {
+  id         String   @id // dataset author_id
+  name       String
+  email      String   @unique
+  phone      String
+  city       String
+  joinedDate DateTime @db.Date
+
+  books   Book[]
+  user    User?
+  tickets Ticket[]
+}
+
+model Book {
+  id                    String    @id // dataset book_id
+  authorId              String
+  title                 String
+  isbn                  String    @unique // masked placeholder: stored verbatim, never validated
+  genre                 String
+  publicationDate       DateTime? @db.Date // null while in production
+  status                String // free text, stored verbatim (e.g. "In Production - Typesetting")
+  mrp                   Int?
+  authorRoyaltyPerCopy  Int?
+  totalCopiesSold       Int
+  totalRoyaltyEarned    Int
+  royaltyPaid           Int
+  royaltyPending        Int
+  lastRoyaltyPayoutDate DateTime? @db.Date
+  printPartner          String?
+  availableOn           String[] // may be empty
+
+  author  Author   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  tickets Ticket[]
+
+  @@index([authorId])
+}
+
+// ---------------------------------------------------------------------------
+// Users (credentials and role; separate from Author business data)
+// ---------------------------------------------------------------------------
+
+// The migration adds a CHECK constraint: AUTHOR users must link to an Author,
+// ADMIN users must not.
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  role         Role
+  name         String
+  authorId     String? @unique
+
+  author          Author?         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  assignedTickets Ticket[]
+  messages        TicketMessage[]
+  internalNotes   InternalNote[]
+  aiDrafts        AiDraft[]
+}
+
+// ---------------------------------------------------------------------------
+// Support tickets
+// ---------------------------------------------------------------------------
+
+model Ticket {
+  id          String       @id @default(cuid())
+  authorId    String
+  bookId      String? // null = "General / Account Level"
+  subject     String
+  description String
+  status      TicketStatus @default(OPEN)
+
+  // Effective values used by the queue. Admin overrides write these directly;
+  // AI classification fills them only while they are still null.
+  category TicketCategory?
+  priority TicketPriority?
+
+  // The model's original suggestion, kept so overrides can be detected.
+  aiCategory           TicketCategory?
+  aiPriority           TicketPriority?
+  aiRationale          String?
+  classificationStatus ClassificationStatus @default(PENDING)
+  classifiedAt         DateTime?
+
+  assigneeId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  author        Author          @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  book          Book?           @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  assignee      User?           @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  messages      TicketMessage[]
+  internalNotes InternalNote[]
+  aiDrafts      AiDraft[]
+  aiCallLogs    AiCallLog[]
+
+  @@index([status, priority, createdAt])
+  @@index([authorId, updatedAt])
+  @@index([assigneeId])
+  @@index([category])
+}
+
+// Author-visible replies from the BookLeaf team.
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  senderId  String
+  body      String
+  aiDraftId String? // set when the reply started from an AI draft
+  createdAt DateTime @default(now())
+
+  ticket  Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender  User     @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  aiDraft AiDraft? @relation(fields: [aiDraftId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId, createdAt])
+}
+
+// Admin-only. A separate table so author-facing queries cannot select notes
+// by accident.
+model InternalNote {
+  id          String   @id @default(cuid())
+  ticketId    String
+  createdById String
+  body        String
+  createdAt   DateTime @default(now())
+
+  ticket    Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+}
+
+// ---------------------------------------------------------------------------
+// AI
+// ---------------------------------------------------------------------------
+
+// Generated reply drafts. The newest row per ticket is the current draft.
+model AiDraft {
+  id                String   @id @default(cuid())
+  ticketId          String
+  body              String
+  commitments       Json // string[]: actions the reply says BookLeaf will take
+  needsVerification Json // string[]: facts the admin must check before sending
+  warnings          Json // string[]: deterministic safety-check findings
+  model             String
+  promptVersion     String
+  createdById       String
+  createdAt         DateTime @default(now())
+
+  ticket    Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  createdBy User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  messages  TicketMessage[]
+
+  @@index([ticketId, createdAt])
+}
+
+// One row per provider call, for cost and reliability evidence.
+// Never stores prompt text or personal data.
+model AiCallLog {
+  id           String        @id @default(cuid())
+  ticketId     String?
+  kind         AiCallKind
+  model        String
+  outcome      AiCallOutcome
+  inputTokens  Int?
+  outputTokens Int?
+  latencyMs    Int
+  createdAt    DateTime      @default(now())
+
+  ticket Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
 }

@@ -107,6 +107,11 @@ Design notes:
 - **Book ownership on tickets** is enforced in the service layer and tested. A composite FK `(bookId, authorId) → Book(id, authorId)` would add a database-level guarantee. It is optional hardening, only if Prisma accepts the optional composite relation cleanly.
 - **Effective vs AI values.** `category`/`priority` hold the effective values and `aiCategory`/`aiPriority` hold the model's original suggestion, so "overridden" can be derived. The AI writes effective values only with `updateMany({ where: { id, category: null } })`, so it never overwrites an admin choice.
 - Book `status` is stored as text, not an enum, because the source values are free text and must round-trip exactly.
+- **Delete rules:**
+  - Dataset records (Author, Book) and users referenced by content use `Restrict`, so history can't silently disappear.
+  - Ticket children (messages, notes, drafts) use `Cascade`.
+  - Optional links (assignee, a message's AI draft, an AI log's ticket) use `SetNull`.
+- Table and column names are Prisma's defaults (PascalCase tables, camelCase columns). The CHECK constraint is hand-written SQL in the `init` migration; Prisma ignores it when diffing, so there is no drift.
 
 ## 4. REST API
 

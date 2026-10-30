@@ -12,7 +12,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T1.2 | Strict TS, Prettier, Vitest baseline | T1.1 | done |
 | T1.3 | Env validation and secret hygiene | T1.2 | done |
 | T1.4 | Local dev/test Postgres (Docker) and Prisma client | T1.3 | done |
-| T1.5 | Initial schema and migration | T1.4 | todo |
+| T1.5 | Initial schema and migration | T1.4 | done |
 | T1.6 | Seed exact dataset (authors, books) | T1.5 | todo |
 | T1.7 | Guarded test-DB harness and seed verification | T1.6 | todo |
 | T1.8 | Early deployment spike (recommended) | T1.7 | todo |
@@ -137,6 +137,15 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** all models, enums and indexes from architecture §3. Add a custom SQL step in the migration for the User role/authorId CHECK constraint.
 - **Acceptance:** `prisma migrate dev` creates the schema. `prisma validate` passes. The priority enum is declared Critical→Low.
 - **Verify:** inspect the generated SQL. Run a quick `psql \d "Ticket"`.
+- **Outcome (2026-10-30):**
+  - **Migration:** `prisma/migrations/<timestamp>_init` creates 7 enums, 8 tables, the §3 indexes and the foreign keys, plus the hand-written `User_role_authorId_check`.
+  - **Not done:** the optional composite FK is skipped (the service-layer check is the planned guard).
+  - **Verified:**
+    - `prisma validate` passes, `migrate dev` applies cleanly and `migrate status` reports up to date.
+    - `\d "Ticket"` shows the expected columns, defaults, indexes and FKs.
+    - The `TicketPriority` enum range is `{CRITICAL,HIGH,MEDIUM,LOW}`.
+    - The CHECK constraint accepts ADMIN-without-author and AUTHOR-with-author rows and rejects the other two combinations (checked in a rolled-back transaction).
+    - A second `migrate dev --create-only` produced an empty migration (no drift); it was deleted.
 
 ### T1.6 Seed exact dataset (authors, books)
 - **Reqs:** DATA-01, DATA-02, BOOK-02, BOOK-03
