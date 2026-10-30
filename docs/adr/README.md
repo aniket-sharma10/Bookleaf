@@ -50,5 +50,6 @@ Optional. Dated factual corrections, or how the decision evolved.
 | [0003](0003-ai-integration-structured-outputs-graceful-degradation.md) | AI integration: provider boundary, structured outputs, graceful degradation | Accepted (model IDs open) | Partial (schema tables only) |
 | [0004](0004-polling-for-near-real-time-updates.md) | Polling for near-real-time ticket updates | Accepted | Not started |
 | [0005](0005-dataset-preserving-data-model.md) | Dataset-preserving data model | Accepted (retrospective) | Implemented |
-| [0006](0006-isolated-local-databases-and-write-guards.md) | Isolated local databases and write-target guards | Accepted (retrospective) | Partial |
+| [0006](0006-isolated-local-databases-and-write-guards.md) | Isolated local databases and write-target guards | Accepted (retrospective) | Implemented |
 | [0007](0007-lazy-environment-validation.md) | Lazy environment validation with point-of-use requirements | Accepted (retrospective) | Implemented |
+| [0008](0008-prisma-cli-target-guard.md) | Guard every Prisma CLI command's database target in `prisma.config.ts` | Proposed (awaiting owner approval) | Implemented |

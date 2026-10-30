@@ -2,9 +2,11 @@
 
 - **Status:** Accepted. Separate dev and test databases, project-namespaced Docker resources and a production database kept separate were the owner's instructions (2026-10-30). The guard details were implemented under that instruction.
 - **Date:** 2026-10-30 (retrospective)
-- **Implementation:** partial.
-  - Implemented: `docker-compose.yml` (T1.4); the seed target guard `prisma/seed-target.ts` (T1.6).
-  - Not yet implemented: the test-database guard (planned for T1.7, `tests/helpers/assert-test-db.ts`).
+- **Implementation:** implemented.
+  - `docker-compose.yml` (T1.4).
+  - The seed target guard (T1.6), now in `prisma/db-target.ts`.
+  - The test-database guard and reset (T1.7): `tests/helpers/test-database.ts`, `tests/helpers/test-db-client.ts`.
+  - The Prisma CLI guard (T1.7, ADR-0008).
 - **Requirements:** DEL-08, DATA-01
 
 ## Context
@@ -20,7 +22,7 @@
 - **Ports:** both bind to loopback only, on non-default ports.
 - **Guards:** every database-writing tool checks its target before connecting, by host, port and database name.
   - **The seed** accepts only `localhost`/`127.0.0.1`/`[::1]` on port `55432`, database `bookleaf_dev`. It also refuses when `NODE_ENV=production`.
-  - **The test harness (T1.7)** will accept only `bookleaf_test` on `55433`.
+  - **The test harness (T1.7)** accepts only `bookleaf_test` on `55433`, and only in test mode.
 - **The production URL** is set only in the hosting provider, never in `.env` or `.env.test`.
 
 ## Rationale
@@ -34,5 +36,11 @@
 
 ## Consequences
 - **Memory:** two containers use more memory than one. The test database loses its data whenever it restarts, which is intended.
-- **Migrations are not guarded.** Only the seed is guarded today; Prisma CLI commands are not. `prisma.config.ts` migrates `DIRECT_URL || DATABASE_URL`, and `process.loadEnvFile` does not override variables already exported in the shell. So a production URL exported in the terminal would be used by `prisma migrate dev` or `prisma migrate reset`. This is an open gap; a fix has not been decided.
+- **Migrations were not guarded** when this ADR was written (T1.6). This gap is addressed by ADR-0008. Original note: only the seed was guarded; Prisma CLI commands were not. `prisma.config.ts` migrates `DIRECT_URL || DATABASE_URL`, and `process.loadEnvFile` does not override variables already exported in the shell. So a production URL exported in the terminal would be used by `prisma migrate dev` or `prisma migrate reset`. At the time this was an open gap.
 - **Seeding production will need a deliberate change.** The guard blocks every database except local dev, so seeding the hosted database (T1.8, T7.4) needs an explicit, reviewed override.
+
+## History
+- **2026-10-31 (T1.7):** factual updates, decision unchanged.
+  - The Implementation line now covers the test-database guard and the Prisma CLI guard.
+  - The seed guard moved from `prisma/seed-target.ts` into the shared `prisma/db-target.ts`, with the same rules.
+  - The "migrations are not guarded" consequence now points to ADR-0008, which addresses it.

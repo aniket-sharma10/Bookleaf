@@ -18,5 +18,11 @@ export default defineConfig({
     environment: "node",
     // Unit tests sit next to the code (src/**); integration tests live in tests/.
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
+    // Rebuilds bookleaf_test from the migrations once per run.
+    globalSetup: ["tests/global-setup.ts"],
+    // Test files share one database, so run them one at a time.
+    fileParallelism: false,
+    // Points app code under test at the test DB (from .env.test, guarded).
+    setupFiles: ["tests/setup-env.ts"],
   },
 });

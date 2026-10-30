@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { z } from "zod";
 
 import type { Prisma, PrismaClient } from "../src/generated/prisma/client";
@@ -104,6 +106,23 @@ export function parseDataset(raw: string): Dataset {
   return result.data;
 }
 
+export const DEFAULT_DATASET_PATH = "./bookleaf_sample_data.json";
+
+/** Reads the dataset file; errors name the path but never the contents. */
+export function readDatasetFile(path: string): string {
+  try {
+    return readFileSync(path, "utf8");
+  } catch (error) {
+    const reason =
+      (error as NodeJS.ErrnoException).code === "ENOENT"
+        ? "file not found"
+        : "file could not be read";
+    throw new DatasetError(
+      `Dataset ${reason}: ${path}. Place bookleaf_sample_data.json in the project root or set SEED_DATA_PATH.`,
+    );
+  }
+}
+
 export type SeedSummary = { authors: number; books: number };
 
 /**
@@ -142,7 +161,8 @@ export async function seedDataset(
 }
 
 // snake_case → camelCase only; values are passed through unchanged.
-function toAuthorData(author: DatasetAuthor): Prisma.AuthorCreateInput {
+// Exported so verifyDataset() compares the database with the same mapping.
+export function toAuthorData(author: DatasetAuthor): Prisma.AuthorCreateInput {
   return {
     id: author.author_id,
     name: author.name,
@@ -153,7 +173,7 @@ function toAuthorData(author: DatasetAuthor): Prisma.AuthorCreateInput {
   };
 }
 
-function toBookData(
+export function toBookData(
   authorId: string,
   book: DatasetBook,
 ): Prisma.BookUncheckedCreateInput {

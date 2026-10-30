@@ -24,7 +24,7 @@ A take-home assignment for BookLeaf Publishing (Full-Stack Developer). It is a w
 - The JWT lives only in the HttpOnly `bl_session` cookie (`SameSite=Lax`, `Secure` in production). Never put it in `localStorage`, a response body or a client-readable place. Logout clears the cookie.
 - Author-scoped code takes `authorId` from the verified token, never from the URL, query or body. Every author query filters by it. Another author's record returns 404.
 - Author responses use explicit `select` DTOs and never include internal notes, drafts, priority, AI fields or assignee.
-- Secrets are read only from `src/server/env.ts`. The exceptions are CLI entry points that can't import server-only code (`prisma.config.ts`, `prisma/seed.ts`); they read `process.env` directly (ADR-0007). Never use a `NEXT_PUBLIC_` secret, never log keys, never commit `.env*` (except `.env.example`).
+- Secrets are read only from `src/server/env.ts`. The exceptions are CLI entry points that can't import server-only code (`prisma.config.ts`, `prisma/seed.ts`, `prisma/verify.ts`); they read `process.env` directly (ADR-0007). Never use a `NEXT_PUBLIC_` secret, never log keys, never commit `.env*` (except `.env.example`).
 - Seed data must match the supplied JSON exactly. Never invent, "fix" or drop dataset records or fields. ISBNs are masked placeholders, so store them verbatim.
 - AI output is validated with Zod before use. It is grounded only in allow-listed verified facts and the KB. It never claims an action (escalation, re-sync, reprint, refund, payment) has happened unless the app records it was performed. It is never sent to an author without an explicit admin send.
 - AI failures must never block ticket creation, manual triage or manual replies.
@@ -38,7 +38,11 @@ A take-home assignment for BookLeaf Publishing (Full-Stack Developer). It is a w
 
 ## Testing and verification
 - `npm run lint && npm run typecheck && npm test` must pass before a task is marked done. Run `npm run build` at phase gates.
-- Tests use only the `bookleaf_test` DB (Docker container `bookleaf-db-test`, port 55433), loaded from `.env.test`, behind a guard that aborts on any other database. Tests use a **fake AI generator** and never call the real Gemini API.
+- Tests use only the `bookleaf_test` DB (Docker container `bookleaf-db-test`, port 55433), loaded from `.env.test`, behind guards that abort on any other database (`tests/helpers/test-database.ts`, ADR-0008). `npm test` resets it first, so the container must be running (`npm run db:up`).
+- **Tests use synthetic fixtures only** (`tests/fixtures/`). Never load or assert on the confidential dataset in tests. The real-data check is the read-only `npm run db:verify` against `bookleaf_dev`.
+- **Prisma CLI commands are guarded** by `prisma.config.ts`: only the local dev or test DB, and no `--url`. Never set `PRISMA_ALLOW_REMOTE_DATABASE` or work around the guards without the owner's explicit approval for that specific operation.
+- **Prisma refuses `migrate reset` when run by an AI agent** without the owner's consent. Ask the owner, stating the exact command, the target database and that the data will be destroyed. Pass their exact consent text via `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` for that operation only. Never invent or reuse consent, and never bypass the check with equivalent SQL.
+- Tests use a **fake AI generator** and never call the real Gemini API.
 - Docker Compose project `bookleaf` only. Never stop, remove or prune other projects' containers or volumes.
 - Every new API route needs: a happy path, validation failure, an entry in the 401/403 authz matrix, and a cross-author test where it touches author data.
 - UI tasks are verified manually in the browser. State what was checked.

@@ -134,7 +134,7 @@ The source of truth is the assignment brief (PDF) and `bookleaf_sample_data.json
 | DEL-05 | README: local setup, architecture decisions, AI integration (prompts, error handling, cost), API docs, limitations. | Mandatory | SUB | Every topic has a section. | — |
 | DEL-06 | Brief justification of the model choice. | Mandatory | D | Section present. | — |
 | DEL-07 | A write-up of at most one page: priorities, trade-offs and how this becomes production-ready. | Mandatory | SUB | `docs/write-up.md`, about 500 words or fewer. | — |
-| DEL-08 | Automated Vitest tests cover authorization, validation, AI failure paths and seeding. They use mocked AI and **only the dedicated test database**. | Derived | Brief, EV | `npm test` passes offline without `GEMINI_API_KEY`. It refuses to run against a non-test database. | — |
+| DEL-08 | Automated Vitest tests cover authorization, validation, AI failure paths and seeding. They use mocked AI, **only the dedicated test database**, and **synthetic data only** (never the confidential dataset). | Derived | Brief, EV | `npm test` passes offline without `GEMINI_API_KEY`. It refuses to run against a non-test database. | — |
 | DEL-09 | No secrets in the repo. `.env.example` documents every variable. | Mandatory | D | Grep is clean. `.env*` is ignored except the example. | — |
 | DEL-10 | Every line can be explained by the owner. | Mandatory | IN | The code stays small and conventional. | — |
 

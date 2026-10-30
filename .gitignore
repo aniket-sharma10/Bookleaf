@@ -15,10 +15,11 @@ next-env.d.ts
 # Generated Prisma client
 src/generated/
 
-# Environment and secrets (only .env.example is committed)
+# Environment and secrets (only the .example templates are committed)
 .env
 .env.*
 !.env.example
+!.env.test.example
 
 # Platform / local tooling
 .vercel/

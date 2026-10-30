@@ -14,7 +14,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T1.4 | Local dev/test Postgres (Docker) and Prisma client | T1.3 | done |
 | T1.5 | Initial schema and migration | T1.4 | done |
 | T1.6 | Seed exact dataset (authors, books) | T1.5 | done |
-| T1.7 | Guarded test-DB harness and seed verification | T1.6 | todo |
+| T1.7 | Guarded test-DB harness and seed verification | T1.6 | done |
 | T1.8 | Early deployment spike (recommended) | T1.7 | todo |
 | T2.1 | HTTP foundation: errors, `withApi`, validation | T1.3 | todo |
 | T2.2 | Password hashing and user seeding | T1.7 | todo |
@@ -158,7 +158,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - **Code layout:** the seed code lives in `prisma/`, not `src/server/`, because it runs as a CLI where `server-only` would throw.
     - `prisma/dataset.ts`: strict Zod schema (rejects unknown or missing keys, wrong types, bad dates, duplicate IDs, emails or ISBNs), `parseDataset()` and `seedDataset()`.
     - `seedDataset()` upserts every author and book by dataset ID in one transaction, mapping snake_case to camelCase only.
-    - `prisma/seed-target.ts`: refuses any target except `localhost`/`127.0.0.1:55432/bookleaf_dev`, and refuses when `NODE_ENV=production`.
+    - `prisma/seed-target.ts` (moved into `prisma/db-target.ts` in T1.7, same rules): refuses any target except `localhost`/`127.0.0.1:55432/bookleaf_dev`, and refuses when `NODE_ENV=production`.
   - **Running it:** `prisma/seed.ts` is registered as `migrations.seed` and run with `npm run db:seed`. Added dev dependency `tsx`.
   - **Logging:** counts only. Errors name paths and rules, never values. Prisma query errors report the code only.
   - **Verified:**
@@ -172,23 +172,42 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 ### T1.7 Test DB harness and seed verification
 - **Reqs:** DATA-01, DATA-02, DEL-08
 - **Prereqs:** T1.6
-- **Scope:**
-  - **Env:** `.env.test` (git-ignored) plus a committed `.env.test.example`. Vitest loads `.env.test` only.
-  - **Guard:** `tests/helpers/assert-test-db.ts` aborts before any DB access unless `NODE_ENV=test` and the URL is `localhost`/`127.0.0.1:55433/bookleaf_test`.
-  - **Setup:** Vitest `globalSetup` runs the guard, then `prisma migrate reset --force`, then seeds by calling `seedDataset()` directly. The `db:seed` CLI deliberately refuses every database except `bookleaf_dev`.
-  - **Verification:** `prisma/verify-dataset.ts` (next to `prisma/dataset.ts`, reusing `parseDataset`; kept out of `src/server` for the same `server-only` reason as the seed) exports `verifySeed(prisma, json)`, which compares every field of every record with the local JSON (counts, IDs, nulls, empty `available_on`, exact strings and numbers). `scripts/verify-seed.ts` (`npm run db:verify`) and an integration test both call it.
-  - **Edge-case assertions:** in-production books, zero-paid books and below-threshold authors are checked, with expected values **derived from the JSON at runtime**. Dataset values are not hard-coded, because the repo is public.
-- **Acceptance:** `npm test` passes, including the verification against the real test DB.
+- **Scope** (revised on 2026-10-31 by the owner's T1.7 instructions: tests use synthetic data only, and Prisma migration commands must be guarded):
+  - **Env:** `.env.test` (git-ignored) plus a committed `.env.test.example`. The test DB URL is read only from `.env.test`.
+  - **Guards:**
+    - `tests/helpers/test-database.ts` (`loadTestDatabaseUrl`, `assertTestDatabase`) accepts only `127.0.0.1`/`localhost`:`55433`/`bookleaf_test`, and only with `NODE_ENV=test`.
+    - `tests/helpers/test-db-client.ts` re-checks `current_database()` before truncating.
+  - **Setup:** Vitest `globalSetup` → `resetTestDatabase()`: the guard, then `prisma migrate reset --force` with the remote opt-in stripped. `setupFiles` points app code at the test DB.
+  - **Migration safety (ADR-0008):** `prisma.config.ts` guards every Prisma CLI command (only the local dev or test DB, `--url` refused, unless `PRISMA_ALLOW_REMOTE_DATABASE=true`). Guards share `prisma/db-target.ts`, which replaces `prisma/seed-target.ts` with the seed rules unchanged.
+  - **Verification:** `prisma/verify-dataset.ts` (`verifyDataset(db, dataset)`) reports differences by record ID and field only.
+    - `prisma/verify.ts` (`npm run db:verify`) runs it read-only against `bookleaf_dev` with the real JSON.
+    - Integration tests run it against `bookleaf_test` with synthetic fixtures.
+  - **Tests:** synthetic fixtures only (`tests/fixtures/synthetic-dataset.ts`). Schema behaviour (CHECK, enum order, defaults, unique, Restrict, Cascade, SetNull) and seed behaviour (exact fields, idempotency, drift correction, rollback) are tested against `bookleaf_test`.
+- **Acceptance:** `npm test` passes against the reset test DB. Unintended targets are refused before any destructive operation. `bookleaf_dev` is unchanged.
 - **Verify:**
   - Corrupt one value in the test DB and confirm that verification fails.
   - Point `.env.test` at `bookleaf_dev` and confirm that the guard aborts before touching it.
+- **Outcome (2026-10-31):**
+  - **Implemented as scoped above.**
+  - **Prisma's own check:** Prisma 7 refused `migrate reset` because it detected an AI agent (Claude Code). The owner explicitly consented to resetting `bookleaf_test` ("Yes, reset bookleaf_test"), and that consent text was passed via `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` for the T1.7 test runs only.
+  - **Verified:**
+    - Tests: 61/61 pass (up from 28), twice in a row, each with a fresh reset. 14 are database integration tests.
+    - Guard refusals: `.env.test` pointing at `bookleaf_dev` or a remote host aborted before any reset, with no credentials in the output. Remote `DATABASE_URL`/`DIRECT_URL` exported in the shell left tests on `bookleaf_test`.
+    - Prisma CLI: refused a remote URL, a remote `DIRECT_URL`, another local Postgres and `--url`. It allowed the dev and test DBs, `generate` without a URL, and the opt-in.
+    - `bookleaf_dev` checksums (rows, migration history, columns) were identical before and after.
+    - `npm run db:verify`: 10 authors and 18 books match exactly.
+    - Lint, typecheck, format and build pass.
+  - **Deviations:**
+    - Tests no longer seed the real JSON; the original plan did.
+    - `db:verify` lives in `prisma/verify.ts`, not `scripts/verify-seed.ts`.
 
 ### T1.8 Early deployment spike (recommended)
 - **Reqs:** DEL-03 (de-risking)
 - **Prereqs:** T1.7
 - **Scope:** create the hosted production DB (Neon; separate from both local DBs) and the Vercel project (repo connected). Set env vars. Run `migrate deploy` in the build. Seed from local and run `db:verify` against production. Deploy the placeholder page.
 - **Acceptance:** the live URL serves the page, and `db:verify` passes against the production DB.
-- **Blockers:** needs Vercel and Neon accounts, and production env vars (`DATABASE_URL`, `AUTH_JWT_SECRET`, `GEMINI_API_KEY`) set only in Vercel.
+- **Blockers:** needs Vercel and Neon accounts, and production env vars (`DATABASE_URL`, `AUTH_JWT_SECRET`, `GEMINI_API_KEY`) set only in Vercel. The Vercel build environment also needs `PRISMA_ALLOW_REMOTE_DATABASE=true` (ADR-0008).
+- **Prerequisite design step:** `db:seed` and `db:verify` refuse every database except local dev. Seeding and verifying production needs an explicit, reviewed override, which must be designed and approved here, not improvised.
 - **Why early:** a Prisma 7 adapter, pooled-URL or build problem found on the last day is the biggest schedule risk.
 
 ---
@@ -272,7 +291,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Reqs:** BOOK-01–05, AUTH-06
 - **Prereqs:** T2.4, T3.1
 - **Scope:** `server/services/books.ts` `listBooksForAuthor(authorId)` returns the 15 fields plus totals. `GET /api/author/books`.
-- **Acceptance:** AUTH007 gets all three of its books, including the in-production BK013. The totals equal the sums of that author's values in the local JSON (computed in the test, not hard-coded). Another author's books never appear. An admin gets 403.
+- **Acceptance:** an author gets all of their books, including an in-production one, and never another author's. The totals equal the sums of the author's book values. Tests use synthetic fixtures (`tests/fixtures/`), never the real dataset; the real-data check is `npm run db:verify`. An admin gets 403.
 - **Verify:** integration tests. Add the route to the authz matrix.
 
 ### T3.3 Author dashboard and My Books UI

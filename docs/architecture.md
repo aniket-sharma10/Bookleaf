@@ -39,12 +39,14 @@ prisma/
   migrations/
   seed.ts                  # CLI entry: dev-DB guard → read + validate dataset → upsert (idempotent)
   dataset.ts               # strict Zod schema of the JSON, parseDataset(), seedDataset() (one transaction)
-  seed-target.ts           # refuses any database except 127.0.0.1:55432/bookleaf_dev
-prisma.config.ts           # Prisma 7 config (datasource URL, seed command)
+  db-target.ts             # database-target guards: seed/verify (dev only), Prisma CLI (dev or test), shared checks
+  verify-dataset.ts        # verifyDataset(): read-only field-by-field comparison, reports IDs/fields only
+  verify.ts                # CLI entry for `npm run db:verify` (dev DB, real dataset, read-only)
+  cli-errors.ts            # safe one-line error messages for the seed/verify CLIs
+prisma.config.ts           # Prisma 7 config (datasource URL, seed command) + CLI target guard (ADR-0008)
 docker-compose.yml         # project "bookleaf": bookleaf-db-dev + bookleaf-db-test (Postgres 16)
 scripts/
-  verify-seed.ts           # runs verifySeed() against any DATABASE_URL (incl. production)
-  ai-eval.ts               # manual, paid: runs KB sample queries through classify/draft
+  ai-eval.ts               # manual, paid: runs our own test queries through classify/draft (T5.9)
 src/
   proxy.ts                 # Next 16 "proxy" (formerly middleware): JWT-based redirect only (UX)
   app/
@@ -79,8 +81,12 @@ src/
       safety.ts            # post-generation checks (unverified amounts, completed-action claims)
       background.ts        # scheduleBackground() → after(); mockable in tests
 tests/
-  integration/             # route-handler tests against real test Postgres
-  helpers/                 # test-DB guard + reset, auth-cookie factory, fake AI provider
+  global-setup.ts          # resets + migrates bookleaf_test once per run (guarded)
+  setup-env.ts             # points app code under test at the test DB
+  fixtures/                # synthetic records only (never the confidential dataset)
+  db/                      # database integration tests (schema, seed, verify)
+  integration/             # route-handler tests against the test DB (from Phase 2)
+  helpers/                 # test-DB guard/reset, guarded client + truncate; later auth-cookie factory, fake AI
 docs/                      # requirements, architecture, plan, ADRs, api.md, write-up.md
 ```
 
@@ -255,12 +261,13 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 | `GEMINI_API_KEY` | server/ai | no | Unset means AI is disabled and graceful mode is used |
 | `GEMINI_CLASSIFY_MODEL`, `GEMINI_DRAFT_MODEL` | server/ai | no | Defaults are set in code after verifying current model IDs |
 | `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` | seed only | for seeding | Demo credentials are documented in the README |
-| `SEED_DATA_PATH` | seed only | no | Default `./bookleaf_sample_data.json` |
+| `SEED_DATA_PATH` | seed, `db:verify` | no | Default `./bookleaf_sample_data.json` |
+| `PRISMA_ALLOW_REMOTE_DATABASE` | `prisma.config.ts` | no | `true` lets a Prisma CLI command reach a non-local database (ADR-0008). Set per command, or in the hosting provider's build environment. Never in `.env`. |
 
 **Environment access** (rationale in **ADR-0007**):
 - App code reads configuration only through `server/env.ts`: `getEnv()` and `requireEnv(name)`. That file is server-only.
 - All variables are optional but validated if set. Nothing uses a `NEXT_PUBLIC_` prefix.
-- The CLI entry points `prisma.config.ts` and `prisma/seed.ts` cannot import server-only modules. They load `.env` with `process.loadEnvFile()` and read `process.env` directly.
+- The CLI entry points `prisma.config.ts`, `prisma/seed.ts` and `prisma/verify.ts` cannot import server-only modules. They load `.env` with `process.loadEnvFile()` and read `process.env` directly.
 - Migrations use `DIRECT_URL || DATABASE_URL`. The app's runtime client (`getDb()`) always uses `DATABASE_URL`.
 
 **Local databases (Docker Compose).** Rationale and the guards are in **ADR-0006**. The compose file sets `name: bookleaf`, so every resource is namespaced and cannot collide with other projects' Postgres containers or volumes on the same machine. It uses the stock `postgres:16-alpine` image; there is no custom image to build.
@@ -272,10 +279,18 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 
 The ports are deliberately non-default to avoid clashing with other local Postgres instances on 5432. They bind to `127.0.0.1` only.
 
-**Test-database isolation (DEL-08).** Three layers keep integration tests off any other database:
-1. Vitest loads `.env.test` explicitly and never reads `.env`.
-2. A guard (`tests/helpers/assert-test-db.ts`) runs in `globalSetup` **before any query or migration**. It aborts unless `NODE_ENV=test`, the host is `localhost` or `127.0.0.1`, the port is `55433` and the database name is exactly `bookleaf_test`.
-3. The reset step (`prisma migrate reset --force`) runs only after the guard, using that URL.
+**Test-database isolation (DEL-08; ADR-0006, ADR-0008).** These layers keep tests off any other database:
+1. **The URL comes only from `.env.test`.** `loadTestDatabaseUrl()` reads that file, not `.env` and not the shell, and accepts only `127.0.0.1`/`localhost`:`55433`/`bookleaf_test`.
+2. **App code under test sees only that URL.** `tests/setup-env.ts` sets `DATABASE_URL` from it, and `DIRECT_URL=""`, in every worker.
+3. **`tests/global-setup.ts` → `resetTestDatabase()`** runs once per `npm test`:
+   1. `assertTestDatabase` checks the URL and `NODE_ENV=test`.
+   2. It runs `prisma migrate reset --force` with `DIRECT_URL=""` and the remote opt-in stripped, so the `prisma.config.ts` guard also applies.
+4. **`truncateAllTables()`** (before each DB test) re-checks `current_database()` on the live connection.
+5. **Synthetic data only.** Tests use fixtures (`tests/fixtures/`); the confidential dataset is never loaded in tests. Real-data checking is the read-only `npm run db:verify` against `bookleaf_dev`.
+
+Test files run one at a time (`fileParallelism: false`) because they share one database. `npm test` needs the `bookleaf-db-test` container running.
+
+**Prisma CLI guard (ADR-0008).** `prisma.config.ts` refuses any target other than the two local databases, and refuses the `--url` override, unless `PRISMA_ALLOW_REMOTE_DATABASE=true`. Limitation: `--config <other file>` bypasses it.
 
 The production database is hosted (Neon) and is never referenced by `.env` or `.env.test`.
 
@@ -287,12 +302,12 @@ The production database is hosted (Neon) and is never referenced by `.env` or `.
 5. `npm run db:seed` (needs the local JSON).
 6. `npm run dev`.
 
-`npm test` resets and seeds only `bookleaf_test`.
+`npm test` resets and migrates only `bookleaf_test`. Tests seed their own synthetic data.
 
 **Deployment (recommended):**
 - **Vercel** (Next.js host) plus **Neon** Postgres, both on free tiers, in nearby regions (e.g. Mumbai/Singapore).
-- Build command: `prisma generate && prisma migrate deploy && next build`.
-- The seed runs **from the local machine** against the production `DATABASE_URL` (the JSON stays out of git), followed by `npm run db:verify`.
+- Build command: `prisma generate && prisma migrate deploy && next build`. The build environment must set `PRISMA_ALLOW_REMOTE_DATABASE=true`, otherwise the CLI guard refuses the hosted URL (ADR-0008).
+- The seed runs **from the local machine** against the production `DATABASE_URL` (the JSON stays out of git), followed by `npm run db:verify`. Both are currently dev-only by design, so T1.8/T7.4 must add an explicit, reviewed production path.
 - AI timeouts must stay below the platform's function duration limit, which must be verified on the chosen plan.
 - Railway (app plus DB in one place) is the fallback if Vercel and Neon cause trouble.
 

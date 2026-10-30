@@ -1,62 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { DatasetError, parseDataset } from "../prisma/dataset";
-import { assertLocalDevDatabase, SeedTargetError } from "../prisma/seed-target";
+import {
+  author,
+  book,
+  inProductionBook,
+  rawDataset,
+} from "./fixtures/synthetic-dataset";
 
-// Synthetic fixture with the dataset's shape. Real dataset values are never
-// committed (public repo); the real file is checked by the seed itself.
-function book(overrides: Record<string, unknown> = {}) {
-  return {
-    book_id: "B1",
-    title: "Example Title",
-    isbn: "000-00-0XXXX-00-0",
-    genre: "Example Genre",
-    publication_date: "2024-02-29",
-    status: "Published & Live",
-    mrp: 100,
-    author_royalty_per_copy: 10,
-    total_copies_sold: 3,
-    total_royalty_earned: 30,
-    royalty_paid: 0,
-    royalty_pending: 30,
-    last_royalty_payout_date: null,
-    print_partner: "Example Partner",
-    available_on: ["Store A"],
-    ...overrides,
-  };
-}
-
-function inProductionBook(overrides: Record<string, unknown> = {}) {
-  return book({
-    book_id: "B2",
-    isbn: "000-00-0XXXX-00-1",
-    publication_date: null,
-    status: "In Production - Example Stage",
-    mrp: null,
-    author_royalty_per_copy: null,
-    total_copies_sold: 0,
-    total_royalty_earned: 0,
-    royalty_pending: 0,
-    print_partner: null,
-    available_on: [],
-    ...overrides,
-  });
-}
-
+// Unit tests for the dataset parser, using synthetic records only. The
+// database side of the seed is covered in tests/db/seed-dataset.test.ts.
 function dataset(books: unknown[] = [book(), inProductionBook()]) {
-  return {
-    authors: [
-      {
-        author_id: "A1",
-        name: "Example Author",
-        email: "author@example.test",
-        phone: "+00-00000-00000",
-        city: "Example City",
-        joined_date: "2023-01-01",
-        books,
-      },
-    ],
-  };
+  return rawDataset([author({}, books)]);
 }
 
 const parse = (value: unknown) => parseDataset(JSON.stringify(value));
@@ -119,63 +74,5 @@ describe("parseDataset", () => {
       parse(dataset([book({ title: "", genre: 42, status: "visible?" })]));
     expect(run).toThrow(/\.title: must not be empty/);
     expect(run).not.toThrow(/42|visible\?/);
-  });
-});
-
-describe("assertLocalDevDatabase", () => {
-  const dev = "postgresql://bookleaf:pw@127.0.0.1:55432/bookleaf_dev";
-
-  it("accepts the local development database", () => {
-    expect(() => assertLocalDevDatabase(dev, "development")).not.toThrow();
-    expect(() =>
-      assertLocalDevDatabase(
-        "postgres://u:p@localhost:55432/bookleaf_dev",
-        "development",
-      ),
-    ).not.toThrow();
-  });
-
-  it.each([
-    ["the test database", "postgresql://u:pw@127.0.0.1:55433/bookleaf_test"],
-    [
-      "the dev name on the test port",
-      "postgresql://u:pw@127.0.0.1:55433/bookleaf_dev",
-    ],
-    ["another local Postgres", "postgresql://u:pw@127.0.0.1:5432/bookleaf_dev"],
-    [
-      "a hosted database",
-      "postgresql://u:pw@ep-x.example.neon.tech/bookleaf_dev?sslmode=require",
-    ],
-    ["a different database name", "postgresql://u:pw@127.0.0.1:55432/postgres"],
-    ["a non-Postgres URL", "mysql://u:pw@127.0.0.1:55432/bookleaf_dev"],
-  ])("refuses %s", (_label, url) => {
-    expect(() => assertLocalDevDatabase(url, "development")).toThrow(
-      SeedTargetError,
-    );
-  });
-
-  it("refuses when NODE_ENV is production, even for the dev URL", () => {
-    expect(() => assertLocalDevDatabase(dev, "production")).toThrow(
-      /NODE_ENV is production/,
-    );
-  });
-
-  it("refuses a missing or unparseable URL", () => {
-    expect(() => assertLocalDevDatabase(undefined, "development")).toThrow(
-      /DATABASE_URL is not set/,
-    );
-    expect(() => assertLocalDevDatabase("not a url", "development")).toThrow(
-      /not a valid URL/,
-    );
-  });
-
-  it("never includes credentials in the refusal message", () => {
-    const run = () =>
-      assertLocalDevDatabase(
-        "postgresql://someuser:S3cretPass@db.example.com:5432/prod",
-        "development",
-      );
-    expect(run).toThrow(/db\.example\.com:5432\/prod/);
-    expect(run).not.toThrow(/S3cretPass|someuser/);
   });
 });
