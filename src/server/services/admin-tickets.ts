@@ -14,6 +14,8 @@ import type {
   QueueQuery,
   UpdateTicketInput,
 } from "@/lib/schemas/tickets";
+import { aiUnavailable } from "@/server/ai/client";
+import { classifyTicket } from "@/server/ai/classify";
 import { getDb } from "@/server/db";
 import { NotFoundError, ValidationError } from "@/server/http/errors";
 
@@ -285,4 +287,20 @@ export async function sendReply(
       status: nextStatus,
     };
   });
+}
+
+/**
+ * Admin "Retry classification" (AI-07, QUEUE-04): runs it now and returns the
+ * updated ticket. AI only fills empty effective fields, so it can be retried
+ * on any ticket without undoing an admin's choices. A failure is a 503 with a
+ * message the admin can act on; the ticket stays usable.
+ */
+export async function retryClassification(
+  ticketId: string,
+): Promise<AdminTicketDetail> {
+  const outcome = await classifyTicket(ticketId);
+  if (outcome.status === "NOT_FOUND")
+    throw new NotFoundError("Ticket not found.");
+  if (outcome.status === "FAILED") throw aiUnavailable(outcome.error);
+  return getTicketForAdmin(ticketId);
 }

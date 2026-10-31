@@ -41,7 +41,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | done |
 | T5.2 | Knowledge-base module | T3.1 | done |
 | T5.3 | Classification service | T5.1, T5.2 | done |
-| T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | todo |
+| T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | done |
 | T5.5 | Royalty policy facts and draft context builder | T5.2, T3.2 | todo |
 | T5.6 | Draft service and endpoint | T5.1, T5.5, T4.2 | todo |
 | T5.7 | Draft safety post-check | T5.6 | todo |
@@ -561,6 +561,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `server/ai/background.ts` (`scheduleBackground` wrapping `after`); wire `onTicketCreated`. `POST /api/admin/tickets/[id]/classification` (admin only, synchronous retry on any ticket; AI only fills empty effective fields; returns the updated ticket; 503 `AI_UNAVAILABLE` on failure). Add it to the authz matrix.
 - **Acceptance:** with a failing generator, creation still returns 201 and the ticket ends FAILED; a retry with a succeeding fake classifies it; exactly one generator call per creation; an author gets 403.
 - **Verify:** `npm test`. Manual check with the real key that a new ticket is classified within seconds.
+- **Outcome (2026-10-31):**
+  - `server/ai/background.ts` `scheduleBackground` (wraps `after()`; runs the task directly outside a request; logs, never throws); `onTicketCreated` now schedules `classifyTicket`. `POST /api/admin/tickets/[id]/classification` via `retryClassification` (admin-tickets service); failures map to 503 `AI_UNAVAILABLE` with a per-kind message (`aiUnavailable` in `server/ai/client.ts`, reused by drafts).
+  - Live (local Docker dev DB, real key, synthetic ticket text): creation returned 201 in 46 ms and the ticket was classified about 2 s later (Printing & Quality / High); retry on a pre-AI ticket classified it (General / Low) with `updatedAt` unchanged.
+  - Tests: 12 new (background runner; creation stays 201 with a failing AI and makes exactly one call; retry success, override kept, 503 message, 404/403/401) plus the matrix row; suite 316/316; build passes.
 
 ### T5.5 Royalty policy facts and draft context builder
 - **Reqs:** DRAFT-04, DRAFT-07, BOOK-07

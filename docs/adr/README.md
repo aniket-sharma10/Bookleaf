@@ -47,7 +47,7 @@ Optional. Dated factual corrections, or how the decision evolved.
 |---|---|---|---|
 | [0001](0001-single-nextjs-app-with-rest-route-handlers.md) | Single Next.js app with REST Route Handlers | Accepted | Partial |
 | [0002](0002-jwt-cookie-auth.md) | Email/password auth with a signed JWT in an HttpOnly cookie | Accepted | Implemented (T2.2–T2.7) |
-| [0003](0003-ai-integration-structured-outputs-graceful-degradation.md) | AI integration: provider boundary, structured outputs, graceful degradation | Accepted (model IDs set 2026-10-31) | Partial (provider, KB, classification; T5.1–T5.3) |
+| [0003](0003-ai-integration-structured-outputs-graceful-degradation.md) | AI integration: provider boundary, structured outputs, graceful degradation | Accepted (model IDs set 2026-10-31) | Partial (provider, KB, classification wired; T5.1–T5.4) |
 | [0004](0004-polling-for-near-real-time-updates.md) | Polling for near-real-time ticket updates | Accepted | Not started |
 | [0005](0005-dataset-preserving-data-model.md) | Dataset-preserving data model | Accepted (retrospective) | Implemented |
 | [0006](0006-isolated-local-databases-and-write-guards.md) | Isolated local databases and write-target guards | Accepted (retrospective; dev DB amended to Neon) | Implemented |

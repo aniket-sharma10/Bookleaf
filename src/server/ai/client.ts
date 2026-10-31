@@ -2,10 +2,12 @@ import "server-only";
 
 import { getDb } from "@/server/db";
 import { type Env, getEnv } from "@/server/env";
+import { AiUnavailableError } from "@/server/http/errors";
 
 import { createGeminiGenerator } from "./gemini";
 import {
   AiError,
+  type AiErrorKind,
   type GenerateRequest,
   type GenerateResult,
   type StructuredGenerator,
@@ -105,4 +107,22 @@ async function logAiCall(entry: AiCallLogEntry): Promise<void> {
   } catch (error) {
     console.error("Failed to write AiCallLog:", error);
   }
+}
+
+const UNAVAILABLE_MESSAGES: Record<AiErrorKind, string> = {
+  RATE_LIMITED:
+    "The AI service is busy right now. Try again in a minute, or continue manually.",
+  TIMEOUT:
+    "The AI service took too long to respond. Try again, or continue manually.",
+  INVALID_OUTPUT:
+    "The AI returned an answer we couldn't use. Try again, or continue manually.",
+  PROVIDER_ERROR:
+    "The AI service is unavailable. Try again later, or continue manually.",
+  DISABLED:
+    "AI isn't configured here. You can still triage and reply manually.",
+};
+
+/** The 503 AI_UNAVAILABLE an admin sees for a failed AI call (DRAFT-08). */
+export function aiUnavailable(kind: AiErrorKind): AiUnavailableError {
+  return new AiUnavailableError(UNAVAILABLE_MESSAGES[kind]);
 }
