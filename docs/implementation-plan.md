@@ -20,7 +20,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T2.2 | Password hashing and user seeding | T1.7 | done |
 | T2.3 | JWT sign/verify and cookie helpers | T1.3 | done |
 | T2.4 | Auth guards (API and pages) | T2.1, T2.3 | done |
-| T2.5 | Login, logout, me endpoints | T2.2, T2.4 | todo |
+| T2.5 | Login, logout, me endpoints | T2.2, T2.4 | done |
 | T2.6 | Login page, proxy, portal shells | T2.5 | todo |
 | T2.7 | Authorization test matrix (baseline) | T2.5 | todo |
 | T3.1 | Shared labels, schemas, formatters | T1.5 | todo |
@@ -285,6 +285,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - Logout returns a `Set-Cookie` that clears the cookie (`Max-Age=0`).
   - `/me` returns the role and authorId.
 - **Verify:** integration tests cover a valid login, wrong password, unknown email, malformed body, the logout cookie-clearing header, and a request without a cookie after logout (401).
+- **Outcome (2026-10-31):**
+  - Routes `src/app/api/auth/{login,logout,me}/route.ts`, service `src/server/services/auth.ts` (`authenticate`, `getCurrentUser`), shared schema `src/lib/schemas/auth.ts`. Login and me return `{ id, name, role, authorId }`; logout returns `{ loggedOut: true }` and is `AUTHENTICATED`.
+  - Login trims and lowercases the email and looks it up exactly (all stored emails are lowercase). An unknown email is compared against a fixed dummy bcrypt hash.
+  - Tests: 10 new integration tests (`tests/integration/auth.test.ts`); suite 142/142. Under `next build`/`next start` against the dev DB, all 12 seeded logins succeed and curl confirmed the 401/400/403, cookie and logout flows.
+  - `/me` re-reads the user from the database for the name; a deleted user gets 401.
 
 ### T2.6 Login page, proxy, portal shells
 - **Reqs:** AUTH-07, BOOK-05 (shell)
