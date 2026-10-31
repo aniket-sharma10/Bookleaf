@@ -39,7 +39,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | done |
 | T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | done |
 | T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | done |
-| T5.2 | Knowledge-base module | T3.1 | todo |
+| T5.2 | Knowledge-base module | T3.1 | done |
 | T5.3 | Classification service | T5.1, T5.2 | todo |
 | T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | todo |
 | T5.5 | Royalty policy facts and draft context builder | T5.2, T3.2 | todo |
@@ -537,6 +537,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `server/ai/knowledge-base.ts`: the policy facts of requirements §14 in our own words, grouped by section (company, royalty, isbn, printing, distribution, production, metadata, tone), plus per-category handling guidance; `sectionsForCategory(category | null)`. No verbatim brief text, no added policies. Guidance keeps the brief's conditions: the 48-hour timeline is the brief's example for investigations and its ISBN sample; for royalty it applies only if a payment is confirmed overdue.
 - **Acceptance:** tests: every category maps to its section(s) and guidance; tone and company are always included; null returns all policy sections.
 - **Verify:** `npm test`. Check every figure against the local PDF: 80/20 of net profit; quarterly, paid within 45 days of quarter end; ₹1,000 minimum with roll-over; printing 5–7 business days; new listings 7–10 business days; re-sync 24–48 hours; metadata changes 3–5 business days; 48 hours as the investigation example.
+- **Outcome (2026-10-31):**
+  - `src/server/ai/knowledge-base.ts`: 8 sections (company, tone, royalty, isbn, printing, distribution, production, metadata), `sectionsForCategory` (company + tone always; General and unclassified get every policy section; Distribution also gets Production, for books not yet live), `CATEGORY_GUIDANCE` / `guidanceForCategory` (none before classification).
+  - Guidance keeps the brief's conditions: 48 hours for ISBN errors and as the investigation example, but for royalty only for a confirmed overdue payment; production never invents a date; reprints only after verification.
+  - Checked against the PDF by script: all 9 numbers and 19 named entities in the KB appear in the brief. Sentences that mirrored the brief were reworded; the only remaining 8-word overlaps are fact lists (platforms, production stages, services).
+  - Tests: 7 unit tests (figures pinned, section mapping, guidance conditions, size); suite 288/288.
 
 ### T5.3 Classification service
 - **Reqs:** AI-01, AI-02, AI-05, AI-06, AI-08, DRAFT-09
