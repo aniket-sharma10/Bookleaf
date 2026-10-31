@@ -23,7 +23,10 @@ import {
 export function createGeneratorFromEnv(
   env: Pick<
     Env,
-    "GEMINI_API_KEY" | "GEMINI_CLASSIFY_MODEL" | "GEMINI_DRAFT_MODEL"
+    | "GEMINI_API_KEY"
+    | "GEMINI_CLASSIFY_MODEL"
+    | "GEMINI_DRAFT_MODEL"
+    | "AI_TIMEOUT_MS"
   >,
 ): StructuredGenerator {
   const apiKey = env.GEMINI_API_KEY;
@@ -33,6 +36,7 @@ export function createGeneratorFromEnv(
   return createGeminiGenerator({
     apiKey,
     models: { CLASSIFY: classify, DRAFT: draft },
+    timeoutMs: env.AI_TIMEOUT_MS,
   });
 }
 

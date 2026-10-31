@@ -51,6 +51,8 @@ export type GeminiConfig = {
   models: Record<AiTask, string>;
   /** Pause before the single retry; tests set 0. */
   retryDelayMs?: number;
+  /** Replaces both tasks' timeouts when set (AI_TIMEOUT_MS). */
+  timeoutMs?: number;
 };
 
 /** JSON schema for Gemini: the Zod schema, minus the `$schema` marker. */
@@ -143,7 +145,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 export function createGeminiGenerator(
-  { apiKey, models, retryDelayMs = 1_000 }: GeminiConfig,
+  { apiKey, models, retryDelayMs = 1_000, timeoutMs }: GeminiConfig,
   client: GeminiModels = new GoogleGenAI({ apiKey }).models,
 ): StructuredGenerator {
   return {
@@ -156,7 +158,7 @@ export function createGeminiGenerator(
       schema,
     }: GenerateRequest<T>): Promise<GenerateResult<T>> {
       const settings = TASK_SETTINGS[task];
-      const signal = AbortSignal.timeout(settings.timeoutMs);
+      const signal = AbortSignal.timeout(timeoutMs ?? settings.timeoutMs);
       const request = {
         model: models[task],
         contents: user,

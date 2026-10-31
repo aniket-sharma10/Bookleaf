@@ -49,7 +49,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.9 | Live prompt evaluation script | T5.3, T5.6 | done |
 | T6.1 | Polling for near-real-time updates | T3.7, T4.3, T4.8 | done |
 | T6.2 | Integration and error-state pass | T6.1, T5.8 | done |
-| T6.3 | AI failure drill | T6.2 | todo |
+| T6.3 | AI failure drill | T6.2 | done |
 | T7.1 | Full quality gate | T6.3 | todo |
 | T7.2 | Security review | T7.1 | todo |
 | T7.3 | Manual end-to-end checklist | T7.1 | todo |
@@ -665,6 +665,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** run locally with (a) no key, (b) an invalid key and (c) a 1 ms timeout setting. Create a ticket, triage it manually, send a manual reply. Check that `AiCallLog` outcomes are correct.
 - **Acceptance:** all three scenarios complete the full ticket lifecycle.
 - **Verify:** manual check. Record the results in the README limitations or error-handling section.
+- **Outcome (2026-10-31):**
+  - Added the optional `AI_TIMEOUT_MS` (env.ts → `createGeneratorFromEnv` → `createGeminiGenerator`), which replaces both task timeouts when set; tested.
+  - Drill (local Docker dev DB, scripted through the real API): in all three modes the ticket was created in about 40 ms and left "Needs triage"; manual triage and assign-to-me, a manual reply (Open → In Progress) and the author seeing it all worked; draft and retry-classification requests returned 503 `AI_UNAVAILABLE` with the mode's message. `AiCallLog`: no key → `DISABLED` (0 ms, no network call); invalid key → `PROVIDER_ERROR` (one call each, no retry); 1 ms → `TIMEOUT`.
+  - Results recorded in the README ("AI failure handling (verified)") and `docs/test-checklist.md`. Corrected the stale model-variable row in architecture §8 ("defaults set in code"; none are). Suite 360/360; build passes.
+  - **Phase 6 gate met:** admin replies and status changes reach the author view without a reload (T6.1); every UI path uses real endpoints (T6.2); AI failure blocks nothing (T6.3).
 
 ---
 

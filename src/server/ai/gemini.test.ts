@@ -164,6 +164,26 @@ describe("createGeminiGenerator", () => {
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
+  it("uses the per-task timeout, or AI_TIMEOUT_MS when configured", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const { generator } = generatorWith(
+      response('{"category":"A","note":"ok"}'),
+    );
+    await generator.generate(request);
+    expect(timeout).toHaveBeenLastCalledWith(15_000);
+
+    const generateContent = vi
+      .fn<GeminiModels["generateContent"]>()
+      .mockResolvedValue(response('{"category":"A","note":"ok"}'));
+    const overridden = createGeminiGenerator(
+      { apiKey: "k", models: { CLASSIFY: "c", DRAFT: "d" }, timeoutMs: 1 },
+      { generateContent },
+    );
+    await overridden.generate({ ...request, task: "DRAFT" });
+    expect(timeout).toHaveBeenLastCalledWith(1);
+    timeout.mockRestore();
+  });
+
   it("maps an aborted request to TIMEOUT", async () => {
     vi.spyOn(AbortSignal, "timeout").mockReturnValueOnce(AbortSignal.abort());
     const { generator } = generatorWith(

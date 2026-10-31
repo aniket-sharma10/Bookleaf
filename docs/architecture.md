@@ -286,7 +286,8 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 | `DIRECT_URL` | Prisma CLI, seed, `db:verify` | with Neon | The Neon **direct** (non-pooled) URL. Empty for local Docker. |
 | `DEV_DATABASE_HOST` | guards (`prisma/db-target.ts`) | with Neon | The `DIRECT_URL` host. Registers it as the development database (ADR-0008). Not a secret, but kept in `.env`. |
 | `GEMINI_API_KEY` | server/ai | no | Unset means AI is disabled and graceful mode is used |
-| `GEMINI_CLASSIFY_MODEL`, `GEMINI_DRAFT_MODEL` | server/ai | no | Defaults are set in code after verifying current model IDs |
+| `GEMINI_CLASSIFY_MODEL`, `GEMINI_DRAFT_MODEL` | server/ai | no | No defaults in code: AI is enabled only when the key and both models are set (§6.1, §6.2) |
+| `AI_TIMEOUT_MS` | server/ai | no | Overrides both AI timeouts (defaults 15 s classify, 30 s draft); used for tuning and the T6.3 failure drill |
 | `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` | seed only | for seeding | Demo login passwords (8+ characters), documented in the README. Accounts: one AUTHOR per dataset author, plus `support.lead@` and `support.agent@bookleaf.example` (ADMIN). |
 | `SEED_DATA_PATH` | seed, `db:verify` | no | Default `./bookleaf_sample_data.json` |
 | `PRISMA_ALLOW_REMOTE_DATABASE` | `prisma.config.ts` | no | `true` lets a Prisma CLI command reach a non-local database (ADR-0008). Set per command, or in the hosting provider's build environment. Never in `.env`. |

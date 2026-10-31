@@ -36,4 +36,21 @@ npm run build      # production build
 npm run db:down    # stop and remove the containers (dev data volume is kept)
 ```
 
+```bash
+npm run ai:smoke   # 2 live calls: checks the configured Gemini models and settings
+npm run ai:eval    # ~18 live calls: synthetic test tickets → docs/ai-eval.md
+```
+
+### AI failure handling (verified)
+
+AI is optional: ticket creation, triage and replies never depend on it. A failure drill (T6.3) ran the full lifecycle (author raises a ticket → admin triages manually → asks for a draft → replies manually → author sees the reply) in three modes, all of which completed:
+
+| Mode | Classification | Draft request | AI call log |
+|---|---|---|---|
+| No `GEMINI_API_KEY` | ticket left "Needs triage" | 503: "AI isn't configured here…" | `DISABLED`, no network call |
+| Invalid key | ticket left "Needs triage" | 503: "The AI service is unavailable…" | `PROVIDER_ERROR`, no retry |
+| `AI_TIMEOUT_MS=1` | ticket left "Needs triage" | 503: "…took too long to respond…" | `TIMEOUT` |
+
+Rate limits (429) map to "The AI service is busy right now. Try again in a minute…" and are never retried automatically; server errors (5xx) get one retry.
+
 Prisma CLI commands may only target the dev database (the registered Neon host or local Docker) or the local test database. The `--url` override is refused, and a remote database needs `PRISMA_ALLOW_REMOTE_DATABASE=true` for that one command (see `docs/adr/0008-prisma-cli-target-guard.md`).

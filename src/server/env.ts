@@ -34,6 +34,9 @@ const envSchema = z.object({
   GEMINI_API_KEY: optional(z.string()),
   GEMINI_CLASSIFY_MODEL: optional(z.string()),
   GEMINI_DRAFT_MODEL: optional(z.string()),
+  // Optional: overrides the per-task AI timeouts (ms). For tuning against a
+  // slow provider, and for failure drills (e.g. 1 to force timeouts).
+  AI_TIMEOUT_MS: optional(z.coerce.number().int().positive()),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -90,3 +90,7 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] An unknown URL shows the branded "Page not found" page (HTTP 404).
 - [x] An unexpected failure (e.g. the database unreachable) shows "Something went wrong" with "Try again" and a reference that matches the server log.
 - [x] Navigation in both portals marks the current page; signing out returns to `/login`.
+
+## AI failure drill (AI-07, DRAFT-08, TICKET-05, MGMT-04)
+
+- [x] With no key, an invalid key, and `AI_TIMEOUT_MS=1`: a new ticket is created and left "Needs triage"; manual triage, a manual reply and the author seeing it all work; asking for a draft shows "AI draft unavailable" with the right reason; the AI call log records `DISABLED`, `PROVIDER_ERROR` or `TIMEOUT`.
