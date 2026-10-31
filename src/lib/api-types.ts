@@ -105,3 +105,46 @@ export type Page<T> = {
   pageSize: number;
   total: number;
 };
+
+/** A message on the thread, as admins see it. */
+export type AdminTicketMessage = {
+  id: string;
+  body: string;
+  sender: { id: string; name: string; role: "AUTHOR" | "ADMIN" };
+  /** The AI draft this reply started from, if any. */
+  aiDraftId: string | null;
+  createdAt: string;
+};
+
+/** An internal note: visible to the BookLeaf team only (MGMT-02). */
+export type InternalNote = {
+  id: string;
+  body: string;
+  createdBy: { id: string; name: string };
+  createdAt: string;
+};
+
+/** GET /api/admin/tickets/:id: everything an admin needs on one ticket. */
+export type AdminTicketDetail = {
+  id: string;
+  subject: string;
+  description: string;
+  status: TicketStatus;
+  category: TicketCategory | null;
+  priority: TicketPriority | null;
+  /** The AI's original suggestion, kept even after an admin override. */
+  aiCategory: TicketCategory | null;
+  aiPriority: TicketPriority | null;
+  aiRationale: string | null;
+  classificationStatus: ClassificationStatus;
+  classifiedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  author: { id: string; name: string; email: string; city: string };
+  book: AuthorBook | null;
+  assignee: { id: string; name: string } | null;
+  messages: AdminTicketMessage[];
+  notes: InternalNote[];
+  /** The current AI draft; always null until AI drafting exists. */
+  latestDraft: null;
+};

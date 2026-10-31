@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { GET as getTicket } from "@/app/api/admin/tickets/[id]/route";
 import { GET as listQueue } from "@/app/api/admin/tickets/route";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { Page, QueueTicket } from "@/lib/api-types";
+import type { AdminTicketDetail, Page, QueueTicket } from "@/lib/api-types";
 import { seedDataset } from "../../prisma/dataset";
 import { edgeCaseRawDataset, toDataset } from "../fixtures/synthetic-dataset";
 import { requestAs, testAuthor } from "../helpers/auth";
@@ -282,5 +283,105 @@ describe("GET /api/admin/tickets", () => {
     expect(
       (await listQueue(await requestAs(null, BASE), noParams)).status,
     ).toBe(401);
+  });
+});
+
+async function detail(id: string, user: Parameters<typeof requestAs>[0] = me) {
+  return getTicket(await requestAs(user, `${BASE}/${id}`), {
+    params: Promise.resolve({ id }),
+  });
+}
+
+describe("GET /api/admin/tickets/:id", () => {
+  it("returns the ticket with author, book, thread, notes and AI metadata", async () => {
+    const id = t.critical!;
+    await db.ticket.update({
+      where: { id },
+      data: {
+        aiCategory: "ROYALTY_PAYMENTS",
+        aiPriority: "HIGH",
+        aiRationale: "Royalty not received for months.",
+        classifiedAt: new Date("2026-01-05T23:31:00Z"),
+      },
+    });
+    await db.ticketMessage.create({
+      data: { ticketId: id, senderId: me.id, body: "We're looking into it." },
+    });
+    await db.internalNote.create({
+      data: {
+        ticketId: id,
+        createdById: otherAdminId,
+        body: "Check bank details.",
+      },
+    });
+
+    const response = await detail(id);
+    expect(response.status).toBe(200);
+    const { data } = (await response.json()) as { data: AdminTicketDetail };
+    expect(data).toMatchObject({
+      id,
+      subject: "Ticket critical",
+      description: "Fixture ticket.",
+      status: "OPEN",
+      category: "ROYALTY_PAYMENTS",
+      priority: "CRITICAL",
+      aiCategory: "ROYALTY_PAYMENTS",
+      aiPriority: "HIGH",
+      aiRationale: "Royalty not received for months.",
+      classificationStatus: "SUCCEEDED",
+      classifiedAt: "2026-01-05T23:31:00.000Z",
+      createdAt: "2026-01-05T23:30:00.000Z",
+      author: {
+        id: "A1",
+        name: "Example Author",
+        email: "author@example.test",
+        city: "Example City",
+      },
+      assignee: null,
+      latestDraft: null,
+    });
+    // The full book record, with calendar dates as YYYY-MM-DD.
+    expect(data.book).toMatchObject({
+      id: "B1",
+      title: "Example Title",
+      publicationDate: "2024-02-29",
+      royaltyPending: 30,
+      lastRoyaltyPayoutDate: null,
+    });
+    expect(data.messages).toEqual([
+      {
+        id: expect.any(String),
+        body: "We're looking into it.",
+        sender: { id: me.id, name: "Me Admin", role: "ADMIN" },
+        aiDraftId: null,
+        createdAt: expect.any(String),
+      },
+    ]);
+    expect(data.notes).toEqual([
+      {
+        id: expect.any(String),
+        body: "Check bank details.",
+        createdBy: { id: otherAdminId, name: "Other Admin" },
+        createdAt: expect.any(String),
+      },
+    ]);
+  });
+
+  it("returns book null for a General / Account Level ticket", async () => {
+    const general = await db.ticket.create({
+      data: { authorId: "A1", subject: "General", description: "No book." },
+    });
+    const { data } = (await (await detail(general.id)).json()) as {
+      data: AdminTicketDetail;
+    };
+    expect(data.book).toBeNull();
+    await db.ticket.delete({ where: { id: general.id } });
+  });
+
+  it("answers 404 for an unknown ID and 403 for an author", async () => {
+    const missing = await detail("no-such-ticket");
+    expect(missing.status).toBe(404);
+    expect((await detail(t.critical!, testAuthor)).status).toBe(403);
+    expect((await detail(t.critical!, null)).status).toBe(401);
   });
 });

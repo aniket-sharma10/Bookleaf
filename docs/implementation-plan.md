@@ -31,7 +31,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T3.6 | New-ticket form UI | T2.6, T3.2, T3.4 | done |
 | T3.7 | My Tickets list and detail UI | T3.5, T2.6 | done |
 | T4.1 | Admin queue API with filters and sort | T3.4 | done |
-| T4.2 | Admin ticket detail API | T4.1 | todo |
+| T4.2 | Admin ticket detail API | T4.1 | done |
 | T4.3 | Admin queue UI | T4.1, T2.6 | todo |
 | T4.4 | Ticket update API (status, overrides, assign to self) | T4.2 | todo |
 | T4.5 | Internal notes API | T4.2 | todo |
@@ -427,6 +427,9 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `GET /api/admin/tickets/[id]` returns the ticket, author summary (name, email, city), book record, messages, notes, latest draft (null for now) and AI metadata.
 - **Acceptance:** 404 for an unknown ID. An author gets 403.
 - **Verify:** integration tests.
+- **Outcome (2026-10-31):**
+  - `getTicketForAdmin` in `server/services/admin-tickets.ts` and `GET /api/admin/tickets/[id]` → `AdminTicketDetail` (`src/lib/api-types.ts`): AI fields, author `{id,name,email,city}`, the full book (same mapping as the author books API, via `toAuthorBook`), assignee, messages (with `aiDraftId`), notes, and `latestDraft: null` until T5.6.
+  - Tests: 3 integration tests plus the matrix row; suite 239/239; build passes.
 
 ### T4.3 Admin queue UI
 - **Reqs:** QUEUE-01–04

@@ -12,7 +12,7 @@ import {
 } from "@/server/policies/royalty";
 
 // Explicit select: every book field except the owner ID (BOOK-01).
-const bookSelect = {
+export const bookSelect = {
   id: true,
   title: true,
   isbn: true,
@@ -35,6 +35,20 @@ function toCalendarDate(value: Date | null): string | null {
   return value ? value.toISOString().slice(0, 10) : null;
 }
 
+type BookRow = Omit<AuthorBook, "publicationDate" | "lastRoyaltyPayoutDate"> & {
+  publicationDate: Date | null;
+  lastRoyaltyPayoutDate: Date | null;
+};
+
+/** A selected book row as the API returns it (calendar dates as strings). */
+export function toAuthorBook(row: BookRow): AuthorBook {
+  return {
+    ...row,
+    publicationDate: toCalendarDate(row.publicationDate),
+    lastRoyaltyPayoutDate: toCalendarDate(row.lastRoyaltyPayoutDate),
+  };
+}
+
 type SummedField = Exclude<keyof AuthorBookTotals, "bookCount">;
 
 function sumBy(books: AuthorBook[], field: SummedField): number {
@@ -54,11 +68,7 @@ export async function listBooksForAuthor(
     select: bookSelect,
     orderBy: { id: "asc" },
   });
-  const books: AuthorBook[] = rows.map((row) => ({
-    ...row,
-    publicationDate: toCalendarDate(row.publicationDate),
-    lastRoyaltyPayoutDate: toCalendarDate(row.lastRoyaltyPayoutDate),
-  }));
+  const books = rows.map(toAuthorBook);
 
   const totals: AuthorBookTotals = {
     bookCount: books.length,

@@ -1,9 +1,12 @@
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
-import type { Page, QueueTicket } from "@/lib/api-types";
+import type { AdminTicketDetail, Page, QueueTicket } from "@/lib/api-types";
 import type { QueueQuery } from "@/lib/schemas/tickets";
 import { getDb } from "@/server/db";
+import { NotFoundError } from "@/server/http/errors";
+
+import { bookSelect, toAuthorBook } from "./books";
 
 // Admin-facing ticket service. Admins see every author's tickets; access is
 // enforced by the routes (withApi access "ADMIN").
@@ -92,5 +95,72 @@ export async function listQueue(
     page: query.page,
     pageSize: query.pageSize,
     total,
+  };
+}
+
+const detailSelect = {
+  id: true,
+  subject: true,
+  description: true,
+  status: true,
+  category: true,
+  priority: true,
+  aiCategory: true,
+  aiPriority: true,
+  aiRationale: true,
+  classificationStatus: true,
+  classifiedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  author: { select: { id: true, name: true, email: true, city: true } },
+  book: { select: bookSelect },
+  assignee: { select: { id: true, name: true } },
+  messages: {
+    select: {
+      id: true,
+      body: true,
+      aiDraftId: true,
+      createdAt: true,
+      sender: { select: { id: true, name: true, role: true } },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  },
+  internalNotes: {
+    select: {
+      id: true,
+      body: true,
+      createdAt: true,
+      createdBy: { select: { id: true, name: true } },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  },
+} satisfies Prisma.TicketSelect;
+
+/** One ticket with its full context for the admin view (QUEUE-01, MGMT-02). */
+export async function getTicketForAdmin(
+  ticketId: string,
+): Promise<AdminTicketDetail> {
+  const row = await getDb().ticket.findUnique({
+    where: { id: ticketId },
+    select: detailSelect,
+  });
+  if (!row) throw new NotFoundError("Ticket not found.");
+
+  const { internalNotes, messages, book, ...ticket } = row;
+  return {
+    ...ticket,
+    classifiedAt: ticket.classifiedAt?.toISOString() ?? null,
+    createdAt: ticket.createdAt.toISOString(),
+    updatedAt: ticket.updatedAt.toISOString(),
+    book: book ? toAuthorBook(book) : null,
+    messages: messages.map((m) => ({
+      ...m,
+      createdAt: m.createdAt.toISOString(),
+    })),
+    notes: internalNotes.map((n) => ({
+      ...n,
+      createdAt: n.createdAt.toISOString(),
+    })),
+    latestDraft: null,
   };
 }

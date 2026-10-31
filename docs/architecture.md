@@ -140,7 +140,7 @@ Design rules (rationale in **ADR-0005**):
 | POST | `/api/author/tickets` | AUTHOR | `{bookId|null, subject, description}` → 201 | Book must be owned. Schedules classification. |
 | GET | `/api/author/tickets/:id` | AUTHOR | Own ticket and message thread (`messages[]`: body, sender name and role, time) | 404 if not own. No notes, drafts, priority, category, AI fields or assignee. |
 | GET | `/api/admin/tickets` | ADMIN | Queue. Query: `status` (multi), `category`, `priority`, `unclassified`, `assignee=me\|none`, `from`, `to`, `page`, `pageSize` | Default: unresolved, priority asc (nulls first), createdAt asc |
-| GET | `/api/admin/tickets/:id` | ADMIN | Ticket, author summary, book, messages, notes, latest draft, AI metadata | |
+| GET | `/api/admin/tickets/:id` | ADMIN | Ticket, author summary `{name,email,city}`, full book, messages, notes, latest draft, AI metadata | `latestDraft` is null until AI drafting (T5.6) |
 | PATCH | `/api/admin/tickets/:id` | ADMIN | `{status?, category?, priority?, assignToMe?: true}` | `assignToMe` sets the assignee to the caller; there is no way to assign others |
 | POST | `/api/admin/tickets/:id/messages` | ADMIN | `{body, aiDraftId?, status?}` → author-visible reply | Moves Open to In Progress if no status is given |
 | POST | `/api/admin/tickets/:id/notes` | ADMIN | `{body}` → internal note | |
