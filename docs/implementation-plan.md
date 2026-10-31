@@ -27,7 +27,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T3.2 | Books API | T2.4, T3.1 | done |
 | T3.3 | Author dashboard and My Books UI | T2.6, T3.2 | todo |
 | T3.4 | Ticket creation API | T2.4, T3.1 | done |
-| T3.5 | Author ticket read APIs | T3.4 | todo |
+| T3.5 | Author ticket read APIs | T3.4 | done |
 | T3.6 | New-ticket form UI | T2.6, T3.2, T3.4 | todo |
 | T3.7 | My Tickets list and detail UI | T3.5, T2.6 | todo |
 | T4.1 | Admin queue API with filters and sort | T3.4 | todo |
@@ -371,6 +371,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `listTicketsForAuthor` and `getTicketForAuthor` with explicit `select` DTOs (no notes, drafts, priority, AI fields or assignee). Routes `GET /api/author/tickets` and `GET /api/author/tickets/[id]`.
 - **Acceptance:** another author's ticket ID gets 404. A test seeds a note, a draft and AI fields, then asserts that none appear in the response.
 - **Verify:** integration tests.
+- **Outcome (2026-10-31):**
+  - `listTicketsForAuthor` (most recently updated first) and `getTicketForAuthor` (replies oldest first, each with sender name and role) in `server/services/author-tickets.ts`; routes `GET /api/author/tickets` and `GET /api/author/tickets/[id]`. Types `AuthorTicketDetail`, `AuthorTicketMessage` in `src/lib/api-types.ts`.
+  - Category is hidden from authors too (it can be an AI guess), along with priority, AI fields, assignee, notes, drafts and a reply's `aiDraftId`.
+  - Tests: 6 integration tests (incl. the leak test, which checks both responses for seeded secret values and forbidden keys) and two matrix rows; suite 215/215; build passes.
+  - Follow-up for T4.6: an admin reply must bump the ticket's `updatedAt`, so "last update" and list order reflect it.
 
 ### T3.6 New-ticket form UI
 - **Reqs:** TICKET-01, TICKET-02, TICKET-04

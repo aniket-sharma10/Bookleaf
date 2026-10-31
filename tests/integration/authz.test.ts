@@ -69,6 +69,19 @@ const MATRIX: MatrixEntry[] = [
     },
     expected: { anonymous: 401, author: 201, admin: 403 },
   },
+  {
+    route: "author/tickets",
+    method: "GET",
+    expected: { anonymous: 401, author: 200, admin: 403 },
+  },
+  // No such ticket: reaching the handler gives an author 404.
+  {
+    route: "author/tickets/[id]",
+    method: "GET",
+    path: "/api/author/tickets/matrix-missing",
+    params: { id: "matrix-missing" },
+    expected: { anonymous: 401, author: 404, admin: 403 },
+  },
 ];
 
 const API_DIR = resolve(process.cwd(), "src/app/api");

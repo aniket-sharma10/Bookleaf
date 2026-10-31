@@ -59,3 +59,16 @@ export type AuthorTicket = {
   createdAt: string;
   updatedAt: string;
 };
+
+/** A reply on the author's ticket thread (only author-visible messages). */
+export type AuthorTicketMessage = {
+  id: string;
+  body: string;
+  sender: { name: string; role: "AUTHOR" | "ADMIN" };
+  createdAt: string;
+};
+
+/** GET /api/author/tickets/:id: the ticket and its reply thread, oldest first. */
+export type AuthorTicketDetail = AuthorTicket & {
+  messages: AuthorTicketMessage[];
+};

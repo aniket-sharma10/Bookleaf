@@ -136,9 +136,9 @@ Design rules (rationale in **ADR-0005**):
 | POST | `/api/auth/logout` | any signed-in | Clears the cookie → `{loggedOut:true}` | 401 without a session |
 | GET | `/api/auth/me` | any signed-in | Current user `{id,name,role,authorId}` | 401 if the user no longer exists |
 | GET | `/api/author/books` | AUTHOR | Own books (all 15 fields), totals, and `payout { thresholdInr, belowThreshold }` | Dates as `YYYY-MM-DD` |
-| GET | `/api/author/tickets` | AUTHOR | Own tickets (summary DTO) | |
+| GET | `/api/author/tickets` | AUTHOR | Own tickets `{id,subject,description,status,book,createdAt,updatedAt}`, most recently updated first | |
 | POST | `/api/author/tickets` | AUTHOR | `{bookId|null, subject, description}` → 201 | Book must be owned. Schedules classification. |
-| GET | `/api/author/tickets/:id` | AUTHOR | Own ticket and message thread | 404 if not own. No notes, drafts, priority or AI fields. |
+| GET | `/api/author/tickets/:id` | AUTHOR | Own ticket and message thread (`messages[]`: body, sender name and role, time) | 404 if not own. No notes, drafts, priority, category, AI fields or assignee. |
 | GET | `/api/admin/tickets` | ADMIN | Queue. Query: `status` (multi), `category`, `priority`, `unclassified`, `assignee=me\|none`, `from`, `to`, `page`, `pageSize` | Default: unresolved, priority asc (nulls first), createdAt asc |
 | GET | `/api/admin/tickets/:id` | ADMIN | Ticket, author summary, book, messages, notes, latest draft, AI metadata | |
 | PATCH | `/api/admin/tickets/:id` | ADMIN | `{status?, category?, priority?, assignToMe?: true}` | `assignToMe` sets the assignee to the caller; there is no way to assign others |

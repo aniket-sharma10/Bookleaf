@@ -1,7 +1,17 @@
 import { createTicketSchema } from "@/lib/schemas/tickets";
 import { dataResponse, withApi } from "@/server/http/handler";
 import { parseJson } from "@/server/http/request";
-import { createTicket } from "@/server/services/author-tickets";
+import {
+  createTicket,
+  listTicketsForAuthor,
+} from "@/server/services/author-tickets";
+
+// The signed-in author's tickets, newest activity first.
+export const GET = withApi(
+  async (_request, { user }) =>
+    dataResponse(await listTicketsForAuthor(user.authorId)),
+  { access: "AUTHOR" },
+);
 
 // Raise a support query. authorId comes from the token, never the body.
 export const POST = withApi(

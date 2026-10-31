@@ -1,9 +1,9 @@
 import "server-only";
 
-import type { AuthorTicket } from "@/lib/api-types";
+import type { AuthorTicket, AuthorTicketDetail } from "@/lib/api-types";
 import type { CreateTicketInput } from "@/lib/schemas/tickets";
 import { getDb } from "@/server/db";
-import { ValidationError } from "@/server/http/errors";
+import { NotFoundError, ValidationError } from "@/server/http/errors";
 
 import { onTicketCreated } from "./ticket-hooks";
 
@@ -81,4 +81,53 @@ export async function createTicket(
     console.error(`Ticket ${row.id}: post-create hook failed:`, error);
   }
   return toAuthorTicket(row);
+}
+
+/** The author's tickets, most recently updated first (TICKET-06). */
+export async function listTicketsForAuthor(
+  authorId: string,
+): Promise<AuthorTicket[]> {
+  const rows = await getDb().ticket.findMany({
+    where: { authorId },
+    select: authorTicketSelect,
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+  });
+  return rows.map(toAuthorTicket);
+}
+
+/**
+ * One of the author's tickets with its reply thread (TICKET-07). Another
+ * author's ticket is reported as not found, so IDs don't leak (AUTH-06).
+ * Messages expose only the body, sender name and role, and time: never the
+ * AI draft a reply started from.
+ */
+export async function getTicketForAuthor(
+  authorId: string,
+  ticketId: string,
+): Promise<AuthorTicketDetail> {
+  const row = await getDb().ticket.findFirst({
+    where: { id: ticketId, authorId },
+    select: {
+      ...authorTicketSelect,
+      messages: {
+        select: {
+          id: true,
+          body: true,
+          createdAt: true,
+          sender: { select: { name: true, role: true } },
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      },
+    },
+  });
+  if (!row) throw new NotFoundError("Ticket not found.");
+
+  const { messages, ...ticket } = row;
+  return {
+    ...toAuthorTicket(ticket),
+    messages: messages.map((message) => ({
+      ...message,
+      createdAt: message.createdAt.toISOString(),
+    })),
+  };
 }
