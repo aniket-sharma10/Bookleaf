@@ -25,6 +25,9 @@ export function TextForm({
   extra,
   onSubmit,
   className,
+  value,
+  onValueChange,
+  rows = 5,
 }: {
   id: string;
   label: string;
@@ -36,8 +39,14 @@ export function TextForm({
   extra?: React.ReactNode;
   onSubmit: (body: string) => Promise<void>;
   className?: string;
+  /** Controlled text (e.g. filled from an AI draft); otherwise kept inside. */
+  value?: string;
+  onValueChange?: (value: string) => void;
+  rows?: number;
 }) {
-  const [body, setBody] = useState("");
+  const [ownBody, setOwnBody] = useState("");
+  const body = value ?? ownBody;
+  const setBody = onValueChange ?? setOwnBody;
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const length = body.trim().length;
@@ -91,7 +100,7 @@ export function TextForm({
         value={body}
         onChange={(event) => setBody(event.target.value)}
         placeholder={placeholder}
-        rows={5}
+        rows={rows}
         disabled={pending}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}

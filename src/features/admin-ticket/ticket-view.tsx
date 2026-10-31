@@ -177,7 +177,7 @@ export function AdminTicketView({
             )}
           </section>
 
-          <ReplyComposer ticket={data} onSent={() => mutate()} />
+          <ReplyComposer key={data.id} ticket={data} onSent={() => mutate()} />
           <InternalNotes ticket={data} onAdded={() => mutate()} />
         </div>
 

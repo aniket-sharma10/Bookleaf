@@ -152,6 +152,29 @@ export function ManagementPanel({
   }
 
   const aiPending = ticket.classificationStatus === "PENDING";
+  // No AI result yet and no complete manual triage: offer a retry (AI-07).
+  const needsTriage =
+    ticket.classificationStatus !== "SUCCEEDED" &&
+    (ticket.category === null || ticket.priority === null);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+
+  async function retryClassification() {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      onSaved(
+        await apiRequest<AdminTicketDetail>(
+          `/api/admin/tickets/${ticket.id}/classification`,
+          { method: "POST" },
+        ),
+      );
+    } catch (error) {
+      setRetryError(errorMessage(error));
+    } finally {
+      setRetrying(false);
+    }
+  }
   const assignedToMe = ticket.assignee?.id === adminId;
 
   return (
@@ -222,6 +245,37 @@ export function ManagementPanel({
             <span className="font-medium text-foreground">AI reasoning: </span>
             {ticket.aiRationale}
           </p>
+        ) : null}
+
+        {needsTriage ? (
+          <div className="grid gap-1.5">
+            <p className="text-xs text-muted-foreground">
+              {ticket.classificationStatus === "PENDING"
+                ? "AI classification hasn't finished for this ticket."
+                : "AI classification failed for this ticket."}{" "}
+              You can set the values above yourself, or ask the AI again.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={saving !== null || retrying}
+              onClick={retryClassification}
+              className="justify-self-start"
+            >
+              {retrying ? (
+                <LoaderCircle aria-hidden className="animate-spin" />
+              ) : (
+                <Sparkles aria-hidden />
+              )}
+              {retrying ? "Classifying…" : "Retry AI classification"}
+            </Button>
+            {retryError ? (
+              <p role="alert" className="text-xs text-destructive">
+                {retryError}
+              </p>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="grid gap-1.5 border-t pt-4">

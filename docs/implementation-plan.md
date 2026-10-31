@@ -45,7 +45,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.5 | Royalty policy facts and draft context builder | T5.2, T3.2 | done |
 | T5.6 | Draft service and endpoint | T5.1, T5.5, T4.2 | done |
 | T5.7 | Draft safety post-check | T5.6 | done |
-| T5.8 | Admin draft UI | T5.6, T5.7, T4.8 | todo |
+| T5.8 | Admin draft UI | T5.6, T5.7, T4.8 | done |
 | T5.9 | Live prompt evaluation script | T5.3, T5.6 | todo |
 | T6.1 | Polling for near-real-time updates | T3.7, T4.3, T4.8 | todo |
 | T6.2 | Integration and error-state pass | T6.1, T5.8 | todo |
@@ -609,6 +609,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** opening a ticket with no draft (or a stale one) requests one draft once and shows "Drafting…". The draft fills the composer for editing. Commitments, needs-verification items and warnings are listed above the editor (informational; no confirmation gate). "Regenerate" button. Failure banner: "AI draft unavailable — write a reply manually", with a "try again in a minute" note on rate limits. Sending passes `aiDraftId`. "Retry classification" for triage tickets.
 - **Acceptance:** manual check with a real key and with AI disabled.
 - **Verify:** manual check.
+- **Outcome (2026-10-31):**
+  - `features/admin-ticket/reply-composer.tsx` (one automatic draft request per opened ticket without a usable draft, via `useSWRMutation`; fills only an empty editor; Regenerate asks before replacing edited text; sends `aiDraftId`), `draft-panel.tsx` (drafting state, "AI draft unavailable — write a reply manually" with the server's per-kind message, warnings / promises / checks lists), `text-form.tsx` (optional controlled mode), and "Retry AI classification" in the Manage panel for untriaged tickets.
+  - Browser check, AI disabled (empty key) then enabled, same local ticket: disabled → classification failed, banner with "AI isn't configured here…", retry explains why, manual reply sent and status moved to In Progress. Enabled → "Drafting…" then the draft filled the editor ("Dear Meera, …", promises listed, no warnings), retry classified it as Distribution / High; Regenerate asked before replacing edits and kept them when dismissed; the edited reply was sent with `aiDraftId` and the draft became stale.
+  - Suite 353/353 (UI checked manually per plan); build passes. Recorded in `docs/test-checklist.md`.
 
 ### T5.9 Live prompt evaluation script
 - **Reqs:** AI-02, DRAFT-04–06 (evidence for the README)
