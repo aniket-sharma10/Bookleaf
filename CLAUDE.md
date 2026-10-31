@@ -24,13 +24,13 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
   - Tests never read it; they use synthetic fixtures (see Testing).
 
 ## Module boundaries
-- `src/app/api/**/route.ts`: thin handlers. Every handler is wrapped in `withApi({ role })`. They parse with Zod, call a service and return `{ data }` or the error envelope.
+- `src/app/api/**/route.ts`: thin handlers. Every handler is wrapped in `withApi(handler, { access })`, where `access` is `PUBLIC` (login only), `AUTHENTICATED`, `AUTHOR` or `ADMIN`. They parse with Zod, call a service and return `{ data }` or the error envelope.
 - `src/server/**`: server-only code (each file imports `server-only`). Services hold the business rules. `server/ai` is the only place that talks to the LLM, and `gemini.ts` is the only file that imports the SDK.
 - `src/lib/**`: client-safe code only (schemas, labels, formatters, API client). It must never import from `src/server`.
 - UI components never import Prisma or services. They use `/api/**` via the API client.
 
 ## Security and data integrity (non-negotiable)
-- Every route except login verifies the JWT (algorithm pinned; issuer, audience and expiry checked; claims validated with Zod) and checks the role in the handler via `withApi`. `proxy.ts` and layouts are UX redirects only.
+- Every route except login verifies the JWT (algorithm pinned; issuer, audience and expiry checked; claims validated with Zod) and checks access in the handler via `withApi`. `proxy.ts` and layouts are UX redirects only.
 - The JWT lives only in the HttpOnly `bl_session` cookie (`SameSite=Lax`, `Secure` in production). Never put it in `localStorage`, a response body or a client-readable place. Logout clears the cookie.
 - Author-scoped code takes `authorId` from the verified token, never from the URL, query or body. Every author query filters by it. Another author's record returns 404.
 - Author responses use explicit `select` DTOs and never include internal notes, drafts, priority, AI fields or assignee.

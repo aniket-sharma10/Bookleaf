@@ -5,3 +5,7 @@ import { loadTestDatabaseUrl } from "./helpers/test-database";
 // URL from .env.test overrides anything exported in the shell or set in .env.
 process.env.DATABASE_URL = loadTestDatabaseUrl();
 process.env.DIRECT_URL = "";
+
+// Fixed, test-only signing secret, so tests never depend on (or read) the real
+// AUTH_JWT_SECRET in .env.
+process.env.AUTH_JWT_SECRET = "test-only-jwt-secret-not-used-anywhere-else";

@@ -166,13 +166,16 @@ describe("parseQuery", () => {
 });
 
 describe("withApi", () => {
+  // These cases are about origin checks, params and errors, not access.
+  const PUBLIC = { access: "PUBLIC" } as const;
   const context = <P extends Record<string, string>>(params: P) => ({
     params: Promise.resolve(params),
   });
 
   it("passes awaited route params to the handler and returns its response", async () => {
-    const route = withApi<{ id: string }>((_request, { params }) =>
-      dataResponse({ id: params.id }),
+    const route = withApi<{ id: string }>(
+      (_request, { params }) => dataResponse({ id: params.id }),
+      PUBLIC,
     );
     const response = await route(
       new Request(`${BASE}/api/x/7`),
@@ -185,7 +188,7 @@ describe("withApi", () => {
   it("turns thrown errors into the error envelope", async () => {
     const route = withApi(() => {
       throw new NotFoundError("Ticket not found.");
-    });
+    }, PUBLIC);
     const response = await route(new Request(`${BASE}/api/x`), context({}));
     expect(response.status).toBe(404);
     expect((await body(response)).error).toEqual({
@@ -196,7 +199,7 @@ describe("withApi", () => {
 
   it("refuses a cross-origin POST with 403 before running the handler", async () => {
     const handler = vi.fn(() => dataResponse("ran"));
-    const route = withApi(handler);
+    const route = withApi(handler, PUBLIC);
     const request = new Request(`${BASE}/api/x`, {
       method: "POST",
       headers: { origin: "https://evil.example" },
@@ -210,7 +213,7 @@ describe("withApi", () => {
   it.each(["PUT", "PATCH", "DELETE"])(
     "refuses a cross-origin %s",
     async (method) => {
-      const route = withApi(() => dataResponse("ran"));
+      const route = withApi(() => dataResponse("ran"), PUBLIC);
       const request = new Request(`${BASE}/api/x`, {
         method,
         headers: { origin: "https://evil.example" },
@@ -220,7 +223,7 @@ describe("withApi", () => {
   );
 
   it("refuses an opaque 'null' origin on mutations", async () => {
-    const route = withApi(() => dataResponse("ran"));
+    const route = withApi(() => dataResponse("ran"), PUBLIC);
     const request = new Request(`${BASE}/api/x`, {
       method: "POST",
       headers: { origin: "null" },
@@ -229,7 +232,7 @@ describe("withApi", () => {
   });
 
   it("allows same-origin and Origin-less mutations, and cross-origin reads", async () => {
-    const route = withApi(() => dataResponse("ran"));
+    const route = withApi(() => dataResponse("ran"), PUBLIC);
     const sameOrigin = new Request(`${BASE}/api/x`, {
       method: "POST",
       headers: { origin: BASE },

@@ -145,7 +145,7 @@ Design rules (rationale in **ADR-0005**):
 | POST | `/api/admin/tickets/:id/drafts` | ADMIN | Generate or regenerate an AI draft | 503 `AI_UNAVAILABLE` on any AI failure |
 | POST | `/api/admin/tickets/:id/classification` | ADMIN | Retry AI classification synchronously | Never overwrites admin overrides |
 
-Access-control rules: (1) Every handler is wrapped by `withApi({ role })`, which returns 401 or 403 before the handler body runs. (2) Author services take `authorId` **from the verified token only**, never from params or body, and every query includes `where: { authorId }`. Another author's record therefore behaves as non-existent (404), which avoids leaking that IDs exist. (3) Author responses use explicit DTO `select`s, not `include: *`, so fields cannot leak. (4) Admins can access all tickets but can only assign tickets to themselves (MGMT-03).
+Access-control rules: (1) Every handler is wrapped by `withApi(handler, { access })`. `access` is required: `PUBLIC` (login only), `AUTHENTICATED`, `AUTHOR` or `ADMIN`. It returns 401 or 403 before the handler body runs, and passes the handler a `user` typed by access level, so AUTHOR handlers always get a non-null `user.authorId` from the token. (2) Author services take `authorId` **from the verified token only**, never from params or body, and every query includes `where: { authorId }`. Another author's record therefore behaves as non-existent (404), which avoids leaking that IDs exist. (3) Author responses use explicit DTO `select`s, not `include: *`, so fields cannot leak. (4) Admins can access all tickets but can only assign tickets to themselves (MGMT-03).
 
 Full request and response documentation goes in `docs/api.md` (API-04).
 
@@ -168,7 +168,7 @@ The approach is **email/password login, with a signed JWT in an HttpOnly cookie*
 - **Layers:**
   1. `proxy.ts` verifies the JWT (with `jose`, no DB access) only to redirect logged-out or wrong-role users away from `/author` and `/admin`. It is **not** relied on for security.
   2. Portal `layout.tsx` calls `requireUser(role)` and redirects. This is a UX gate.
-  3. `withApi({ role })` in every route handler is the **actual boundary**. It verifies the token, then checks the role. It returns 401 `UNAUTHENTICATED` or 403 `FORBIDDEN`.
+  3. `withApi(handler, { access })` in every route handler is the **actual boundary** (`src/server/http/handler.ts`). It verifies the token (`getUserFromRequest`, `src/server/auth/session.ts`), then checks the role. It returns 401 `UNAUTHENTICATED` or 403 `FORBIDDEN`.
   4. Services scope author data by `ctx.user.authorId`, which comes from the verified token and never from client input.
 - **CSRF:** `SameSite=Lax`, plus the `Origin` check on mutations in `withApi` (see §4).
 - **Login abuse:** no rate limiting in scope. This is a documented limitation.

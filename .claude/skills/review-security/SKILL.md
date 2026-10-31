@@ -20,7 +20,7 @@ Review the code; don't assume. Findings must cite `file:line` and describe a con
 - Login uses a bcrypt compare and the same generic error for an unknown email and a wrong password. A dummy compare prevents timing-based user enumeration.
 
 **Authorization boundary** (`src/app/api/**/route.ts`)
-- Enumerate every route file. Each one, except login, is wrapped in `withApi` with the correct `role`. Confirm the authz matrix test lists every route.
+- Enumerate every route file. Each one is wrapped in `withApi` with the correct `access`, and only login uses `PUBLIC`. Confirm the authz matrix test lists every route.
 - Nothing relies on `proxy.ts` or layouts for protection.
 - Admin-only mutations (status, overrides, notes, drafts, classification) reject authors.
 - Assignment is self-only (MGMT-03): the update endpoint accepts `assignToMe: true` and sets the assignee to the caller. It has no field for assigning, or unassigning, anyone else, and unknown fields are rejected.

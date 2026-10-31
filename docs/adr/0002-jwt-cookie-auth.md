@@ -2,7 +2,12 @@
 
 - **Status:** Accepted (decided by the project owner, 2026-10-30; replaces the earlier *proposed* database-session design, which was never accepted)
 - **Date:** 2026-10-30
-- **Implementation:** partial. Done: password hashing (`src/server/auth/password.ts`, T2.2); token signing and verification (`jwt.ts`, `jose`, T2.3); session cookie helpers (`cookie.ts`, T2.3). Still to come: guards, login and logout routes, and pages (T2.4–T2.7).
+- **Implementation:** partial. Done:
+  - password hashing (`src/server/auth/password.ts`, T2.2);
+  - token and cookie helpers (`jwt.ts`, `cookie.ts`, T2.3);
+  - API and page guards (`session.ts`, `guards.ts`, `withApi` access levels, T2.4).
+
+  Still to come: login and logout routes, pages, and the authz test matrix (T2.5–T2.7).
 - **Requirements:** AUTH-01–08, API-05
 
 ## Context
@@ -17,7 +22,7 @@
   - Claims: `sub`, `role`, `authorId` (null for admins), `iss` and `aud`, and `exp` 8 hours after issue.
 - **Storage:** the token is held only in the `bl_session` cookie, with `HttpOnly`, `SameSite=Lax`, `Secure` in production and `Path=/`.
   - It is never returned in a response body, stored in `localStorage` or readable by client JavaScript.
-- **Verification:** every protected route handler is wrapped in `withApi({ role })`, which:
+- **Verification:** every protected route handler is wrapped in `withApi(handler, { access })`, which:
   - verifies the signature with the algorithm pinned, plus issuer, audience and expiry;
   - validates the claims with Zod;
   - enforces the role.
@@ -53,3 +58,4 @@
 - **2026-10-30:** the owner decided on the JWT-cookie approach, and the proposal was rewritten in place before the repository's first docs commit. The original text is therefore not in git history. Its substance survives as the first alternative above.
 - **2026-10-30:** corrected the secret-validation consequence, which had said "validated at startup", to match ADR-0007.
 - **2026-10-31:** added the **Implementation** and **Rationale** sections (documentation-format update). The decision is unchanged. The rationale was drawn from the owner's recorded instructions and the existing text.
+- **2026-10-31 (T2.4):** naming correction only: `withApi({ role })` became `withApi(handler, { access })`, with access levels `PUBLIC`, `AUTHENTICATED`, `AUTHOR` and `ADMIN`, so that public and any-user routes can be declared explicitly. The decision is unchanged.

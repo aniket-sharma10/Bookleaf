@@ -16,6 +16,8 @@ const ALGORITHM = "HS256";
 export type AuthUser =
   | { id: string; role: "AUTHOR"; authorId: string }
   | { id: string; role: "ADMIN"; authorId: null };
+export type AuthorUser = Extract<AuthUser, { role: "AUTHOR" }>;
+export type AdminUser = Extract<AuthUser, { role: "ADMIN" }>;
 
 // An AUTHOR must carry the author it acts for; an ADMIN never does. Anything
 // else is rejected, even if correctly signed.

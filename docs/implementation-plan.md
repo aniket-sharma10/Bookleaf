@@ -19,7 +19,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T2.1 | HTTP foundation: errors, `withApi`, validation | T1.3 | done |
 | T2.2 | Password hashing and user seeding | T1.7 | done |
 | T2.3 | JWT sign/verify and cookie helpers | T1.3 | done |
-| T2.4 | Auth guards (API and pages) | T2.1, T2.3 | todo |
+| T2.4 | Auth guards (API and pages) | T2.1, T2.3 | done |
 | T2.5 | Login, logout, me endpoints | T2.2, T2.4 | todo |
 | T2.6 | Login page, proxy, portal shells | T2.5 | todo |
 | T2.7 | Authorization test matrix (baseline) | T2.5 | todo |
@@ -270,6 +270,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `getUserFromRequest(req)` and `getUserFromCookies()`, both built on `verifyAuthToken`. Complete `withApi({ role })`, which injects `ctx.user` (including `authorId` for authors, taken only from the verified token). Add `requireUser(role)` for server layouts (redirect to `/login`, or to the user's own portal on a wrong role).
 - **Acceptance:** a handler wrapped with `role: 'ADMIN'` returns 401 with no cookie and 403 with an author cookie.
 - **Verify:** unit and integration tests with an auth-cookie factory helper (`tests/helpers/auth.ts`).
+- **Outcome (2026-10-31):**
+  - Added `src/server/auth/session.ts` (`getUserFromRequest`) and `guards.ts` (`getUserFromCookies`, `requireUser`, `portalPath`). `withApi(handler, { access })` now requires an explicit access level and types `user` per level.
+  - Tests use a fixed test-only `AUTH_JWT_SECRET` (`tests/setup-env.ts`). 14 new tests; suite 132/132. A temporary route under `next build`/`next start` returned 401, 403 and 200 as expected (then deleted).
+  - Deviation: `access` replaces the planned `role` option, because routes also need `PUBLIC` and `AUTHENTICATED`. Docs updated.
 
 ### T2.5 Login, logout, me endpoints
 - **Reqs:** AUTH-01–04
