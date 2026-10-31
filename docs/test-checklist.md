@@ -82,3 +82,11 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] A ticket raised by an author appears in an open admin queue within about 15 s.
 - [x] Text being typed in the admin reply box is never replaced by a refresh.
 - [x] If a refresh fails, the page stays (with "Couldn't refresh just now…") and recovers by itself.
+
+## Errors and session end (API-01, API-03)
+
+- [x] If the session ends while a page is open (e.g. signed out in another tab), the next refresh sends the browser to the login page with "Your session has ended".
+- [x] A wrong password on the login page shows the login error and doesn't redirect.
+- [x] An unknown URL shows the branded "Page not found" page (HTTP 404).
+- [x] An unexpected failure (e.g. the database unreachable) shows "Something went wrong" with "Try again" and a reference that matches the server log.
+- [x] Navigation in both portals marks the current page; signing out returns to `/login`.

@@ -1,16 +1,20 @@
+import { Clock } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { BrandMark } from "@/components/brand-mark";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { LoginForm } from "@/features/auth/login-form";
 import { getUserFromCookies, portalPath } from "@/server/auth/guards";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   // Already signed in: go straight to the right portal.
   const user = await getUserFromCookies();
   if (user) redirect(portalPath(user.role));
+  // Set by the API client when a request found the session had ended.
+  const expired = (await searchParams).expired === "1";
 
   return (
     <main className="grid min-h-dvh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
@@ -86,6 +90,16 @@ export default async function LoginPage() {
             and password.
           </p>
 
+          {expired ? (
+            <Alert className="mb-6">
+              <Clock aria-hidden />
+              <AlertTitle>Your session has ended</AlertTitle>
+              <AlertDescription>
+                For your security, sessions end after a while. Please sign in
+                again.
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <LoginForm />
         </div>
       </section>

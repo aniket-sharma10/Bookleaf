@@ -30,6 +30,24 @@ const NETWORK_ERROR =
   "We can't reach BookLeaf right now. Check your internet connection and try again.";
 const UNKNOWN_ERROR = "Something went wrong. Please try again.";
 
+/** Where a signed-out browser is sent; the login page explains why. */
+export const SESSION_EXPIRED_URL = "/login?expired=1";
+
+/**
+ * A 401 from the API means the session has ended (expired, or signed out in
+ * another tab), so send the browser to sign in again. The login request
+ * itself is excluded: there a 401 just means wrong credentials.
+ */
+function redirectToLogin(path: string): void {
+  if (typeof window === "undefined" || path.startsWith("/api/auth/login")) {
+    return;
+  }
+  // A full page load on purpose: it drops every cached page and SWR entry from
+  // the session that ended, which a client-side router.push would keep.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.assign(SESSION_EXPIRED_URL);
+}
+
 /** Sends a request; resolves to the parsed success body, or throws. */
 async function send(
   path: string,
@@ -50,6 +68,7 @@ async function send(
   // A proxy or crash page may not be JSON; treat that as an unknown error.
   const payload: unknown = await response.json().catch(() => null);
   if (response.ok) return payload;
+  if (response.status === 401) redirectToLogin(path);
 
   const error = (payload as ErrorEnvelope | null)?.error;
   throw new ApiClientError(

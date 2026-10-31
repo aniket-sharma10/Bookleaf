@@ -48,7 +48,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.8 | Admin draft UI | T5.6, T5.7, T4.8 | done |
 | T5.9 | Live prompt evaluation script | T5.3, T5.6 | done |
 | T6.1 | Polling for near-real-time updates | T3.7, T4.3, T4.8 | done |
-| T6.2 | Integration and error-state pass | T6.1, T5.8 | todo |
+| T6.2 | Integration and error-state pass | T6.1, T5.8 | done |
 | T6.3 | AI failure drill | T6.2 | todo |
 | T7.1 | Full quality gate | T6.3 | todo |
 | T7.2 | Security review | T7.1 | todo |
@@ -653,6 +653,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** confirm there is no mock data. A 401 from any fetch redirects to `/login`. 403, 404 and 5xx states are friendly. Check the empty states. Check navigation and logout.
 - **Acceptance:** each case on the checklist has been exercised once.
 - **Verify:** manual check, plus `npm test`.
+- **Outcome (2026-10-31):**
+  - No mock data: a scan of `src` finds only the login timing-defence hash and a comment. Every view reads the real API.
+  - 401 → `/login?expired=1` from any API call (`redirectToLogin` in `lib/api-client.ts`; the login request itself is excluded, since there a 401 means wrong credentials; a full page load on purpose so no signed-out data stays cached); the login page shows "Your session has ended". New `app/not-found.tsx` (branded 404, own title) and `app/error.tsx` (Next 16 `retry()`, shows only the error reference). 403s don't occur in normal use (the proxy and layouts keep users in their own portal); the API's 403 message is shown by `ErrorState` if one does.
+  - Browser check: sign-out from inside an open author page → the next poll sent the browser to the session-ended login page; unknown URL → HTTP 404 page; a real database failure (server pointed at an unused port) → error page whose reference matched the server log entry; author and admin navigation with correct active links; admin sign-out → plain `/login`, `/me` 401. Empty states were checked in earlier tasks (tickets, queue filters, notes, replies).
+  - Tests: 5 new (API client incl. "no redirect for a failed login"); suite 359/359; build passes.
 
 ### T6.3 AI failure drill
 - **Reqs:** AI-07, DRAFT-08, TICKET-05, MGMT-04
