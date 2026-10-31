@@ -43,3 +43,11 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] Wide screens show a table with a totals row; phones show one card per book with every field, including print partner and platforms.
 - [x] No `null`, `NaN` or "Invalid Date" anywhere (AUTH002, AUTH007, AUTH009).
 - [x] The loading skeleton and the error state with "Try again" render (forced in DevTools).
+
+## Admin queue (QUEUE-01 to QUEUE-05)
+
+- [x] `/admin` shows unresolved tickets by default: "Needs triage" first, then Critical → Low, oldest first.
+- [x] Each row shows priority (or "Needs triage"), subject, author, book, category, status, assignee ("You" for yourself) and an age badge that warms after 2 and 7 days.
+- [x] Changing a filter updates the URL; opening a filtered URL restores the filters; "Clear filters" resets them.
+- [x] A filter with no matches shows "No tickets match these filters".
+- [x] At phone width, rows become cards with all the same information.

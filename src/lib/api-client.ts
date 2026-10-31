@@ -1,6 +1,8 @@
 // Browser-side client for the app's own `/api/**` routes. Unwraps the
 // `{ data }` envelope and turns the `{ error }` envelope into ApiClientError.
 
+import type { Page } from "./api-types";
+
 export type FieldIssue = { path: string; message: string };
 
 export class ApiClientError extends Error {
@@ -28,10 +30,11 @@ const NETWORK_ERROR =
   "We can't reach BookLeaf right now. Check your internet connection and try again.";
 const UNKNOWN_ERROR = "Something went wrong. Please try again.";
 
-export async function apiRequest<T>(
+/** Sends a request; resolves to the parsed success body, or throws. */
+async function send(
   path: string,
   { method = "GET", body }: RequestOptions = {},
-): Promise<T> {
+): Promise<unknown> {
   let response: Response;
   try {
     response = await fetch(path, {
@@ -46,7 +49,7 @@ export async function apiRequest<T>(
 
   // A proxy or crash page may not be JSON; treat that as an unknown error.
   const payload: unknown = await response.json().catch(() => null);
-  if (response.ok) return (payload as { data: T }).data;
+  if (response.ok) return payload;
 
   const error = (payload as ErrorEnvelope | null)?.error;
   throw new ApiClientError(
@@ -57,7 +60,20 @@ export async function apiRequest<T>(
   );
 }
 
+/** Calls the API and returns the `data` of the `{ data }` envelope. */
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return ((await send(path, options)) as { data: T }).data;
+}
+
 /** SWR fetcher: `useSWR<T>("/api/...", fetcher)`. Errors are ApiClientError. */
 export function fetcher<T>(path: string): Promise<T> {
   return apiRequest<T>(path);
+}
+
+/** SWR fetcher for paginated lists: the whole `{ data, page, pageSize, total }`. */
+export async function pageFetcher<T>(path: string): Promise<Page<T>> {
+  return (await send(path)) as Page<T>;
 }

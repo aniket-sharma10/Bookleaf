@@ -75,3 +75,17 @@ export function formatDateTime(value: DateInput, fallback = EMPTY): string {
   const date = toDate(value);
   return date ? timestamp.format(date) : fallback;
 }
+
+/**
+ * Compact time since a moment, for queue ages: "12m", "5h", "3d".
+ * `now` is a parameter so callers (and tests) control the clock.
+ */
+export function formatAge(value: DateInput, now: number = Date.now()): string {
+  const date = toDate(value);
+  if (!date) return EMPTY;
+  const minutes = Math.max(0, Math.floor((now - date.getTime()) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}

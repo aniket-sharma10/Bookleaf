@@ -4,6 +4,7 @@ import {
   EMPTY,
   formatCount,
   formatDate,
+  formatAge,
   formatDateTime,
   formatInr,
 } from "./format";
@@ -66,5 +67,19 @@ describe("formatDateTime (timestamps)", () => {
   it("is null-safe", () => {
     expect(formatDateTime(null)).toBe(EMPTY);
     expect(formatDateTime("garbage")).toBe(EMPTY);
+  });
+});
+
+describe("formatAge", () => {
+  const now = Date.parse("2026-10-31T12:00:00Z");
+  it("shows minutes, then hours, then days", () => {
+    expect(formatAge("2026-10-31T11:48:00Z", now)).toBe("12m");
+    expect(formatAge("2026-10-31T07:00:00Z", now)).toBe("5h");
+    expect(formatAge("2026-10-28T11:00:00Z", now)).toBe("3d");
+  });
+
+  it("never goes negative, and is null-safe", () => {
+    expect(formatAge("2026-10-31T12:05:00Z", now)).toBe("0m");
+    expect(formatAge(null, now)).toBe(EMPTY);
   });
 });

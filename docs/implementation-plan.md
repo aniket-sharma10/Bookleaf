@@ -32,7 +32,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T3.7 | My Tickets list and detail UI | T3.5, T2.6 | done |
 | T4.1 | Admin queue API with filters and sort | T3.4 | done |
 | T4.2 | Admin ticket detail API | T4.1 | done |
-| T4.3 | Admin queue UI | T4.1, T2.6 | todo |
+| T4.3 | Admin queue UI | T4.1, T2.6 | done |
 | T4.4 | Ticket update API (status, overrides, assign to self) | T4.2 | done |
 | T4.5 | Internal notes API | T4.2 | done |
 | T4.6 | Admin response API | T4.2 | done |
@@ -437,6 +437,9 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `/admin` table. Filters are stored in URL search params so views can be bookmarked. Show priority and status badges, an age badge ("3d"), the assignee, "Needs triage" for null category or priority, and an "Assigned to me" quick filter.
 - **Acceptance:** manual check. Filters round-trip through the URL.
 - **Verify:** manual check.
+- **Outcome (2026-10-31):**
+  - `/admin` with `features/admin-queue/queue.tsx`: filters (status incl. "Unresolved" default and "All statuses", category, priority, date range, "Assigned to me", "Needs triage", "Clear filters") kept in the URL and passed as-is to the API; table on wide screens, cards on phones; pagination footer. Shared `components/ticket-badges.tsx` (priority, needs-triage, age), `formatAge` in `lib/format.ts` (tested), `hooks/use-minute-clock.ts` (pure "now" for ages), and `pageFetcher` in `lib/api-client.ts`.
+  - Browser check (local Docker dev DB, Support Lead; two tickets triaged through the PATCH API as Support Agent): order (needs triage, High, Medium), "Support Agent" as assignee, filters UI→URL (`?priority=HIGH`) and URL→UI (all statuses + needs triage), filtered empty state, phone layout.
 
 ### T4.4 Ticket update API
 - **Reqs:** MGMT-01, MGMT-03, AI-03, AI-04

@@ -1,26 +1,25 @@
-import { Inbox } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { EmptyState } from "@/components/empty-state";
 import { PageHeading } from "@/components/page-heading";
+import { AdminQueue } from "@/features/admin-queue/queue";
+import { requirePortalUser } from "@/server/auth/guards";
 
 export const metadata: Metadata = { title: "Ticket queue" };
 
-// Access is checked by the admin layout (and the proxy). This page loads no
-// data itself; the queue will come from the admin API.
-export default function AdminQueuePage() {
+export default async function AdminQueuePage() {
+  const admin = await requirePortalUser("ADMIN");
   return (
     <>
       <PageHeading
         eyebrow="Support desk"
         title="Ticket queue"
-        description="Author queries, most urgent first."
+        description="Unresolved author queries: tickets that need triage first, then the most urgent and longest waiting."
       />
-      <EmptyState
-        icon={Inbox}
-        title="No tickets in the queue"
-        description="New author queries will appear here as they arrive."
-      />
+      {/* The queue reads its filters from the URL (useSearchParams). */}
+      <Suspense>
+        <AdminQueue adminId={admin.id} />
+      </Suspense>
     </>
   );
 }
