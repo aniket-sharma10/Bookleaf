@@ -86,7 +86,7 @@ The source of truth is the product brief (PDF) and `bookleaf_sample_data.json`. 
 
 | ID | Requirement | Priority | Src | Acceptance criterion | Data deps |
 |---|---|---|---|---|---|
-| DRAFT-01 | When an admin opens a ticket, an AI draft based on the query **and** the Knowledge Base is presented. | Mandatory | B | Opening a ticket without a draft triggers generation, with a loading state. The draft appears in the editor. | KB, ticket |
+| DRAFT-01 | When an admin opens a ticket, an AI draft based on the query **and** the Knowledge Base is presented. | Mandatory | B | Opening an Open or In Progress ticket that has no reply and no draft yet triggers generation, with a loading state. The draft appears in the editor. Otherwise the stored draft is shown, or the admin asks for one with "Draft with AI", so reopening a ticket never spends an AI call by itself. | KB, ticket |
 | DRAFT-02 | The admin edits the draft before sending. Nothing is ever auto-sent. | Mandatory | B | Only an explicit admin "Send" creates an author-visible message. | — |
 | DRAFT-03 | The sent response appears in the author's ticket view. | Mandatory | B | The author detail endpoint returns it (see RT-01). | — |
 | DRAFT-04 | Drafts are grounded only in verified application data (the ticket, the author's own book records, and code-derived policy facts) and the runtime KB module. No invented numbers, dates, platforms or policies. | Mandatory | KB, D | The prompt contains only allow-listed facts. Prompt-construction tests check this. | `books[]`, KB |

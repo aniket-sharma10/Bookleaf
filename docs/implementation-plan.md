@@ -59,7 +59,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T7.7 | Handover | T7.6 | todo |
 | T7.8 | Basic rate limiting | T7.2 | done |
 | T7.9 | Remove the pattern-based draft post-check; simplify the draft panel | T7.8 | done |
-| T7.10 | Draft automatically only before the first reply | T7.9 | todo |
+| T7.10 | Draft automatically only before the first reply | T7.9 | done |
 
 Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T1.3. T3.1, T5.1 and T5.2 do not depend on the UI, and can be pulled forward if a session has spare time.
 
@@ -757,6 +757,17 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - Browser check (`next start` on the local Docker dev DB, seeded): a new royalty ticket drafted in about 7 s, and the panel showed one promise and two checks above the editor.
   - Suite 361/361 (the 10 removed tests were the post-check's); lint, typecheck, format and build pass.
   - Follow-ups: the owner applies the migration to the Neon dev DB (`npx prisma migrate deploy`), since the classifier blocked it here. `docs/ai-eval.md` still shows the old run's "no safety warnings" rows until `npm run ai:eval` is run again.
+
+### T7.10 Draft automatically only before the first reply
+- **Reqs:** DRAFT-01, DRAFT-07
+- **Prereqs:** T7.9
+- **Scope:** found in the owner's manual testing. Sending a reply made the draft stale, and every reopen then generated a new one, spending an AI call even on tickets already answered or resolved. The owner's rule: draft by itself only when no reply has been sent, no draft exists and the ticket isn't Resolved or Closed; otherwise a button.
+- **Verify:** unit tests for the rule; browser check of each case with the AI call log.
+- **Outcome:**
+  - `src/lib/drafts.ts`: `shouldAutoDraft` (Open or In Progress, no messages, no draft) and `usableDraft` (moved out of the composer); 5 unit tests.
+  - `reply-composer.tsx`: the automatic request follows `shouldAutoDraft`, and the panel shows "Drafting…" from the first render. "Draft with AI", "Regenerate" and "Try again" share one path that asks before replacing the admin's own text. Previously "Try again" after a failure replaced typed text without asking. A draft never overwrites text typed while it is generated. `draft-panel.tsx` shows "Draft with AI" when there is no draft.
+  - Browser check (`next start` on the local Docker dev DB; draft calls counted in `AiCallLog`): reopening a ticket with a stored draft showed it with no call. After sending, the panel offered "Draft with AI" and a reopen made no call. "Draft with AI" over typed text asked first: Cancel kept the text with no call; OK drafted a follow-up into the editor. A Resolved ticket with no reply made no call. A new unanswered ticket drafted by itself (one call), with no flash of the button, and a reload made no further call.
+  - Suite 366/366; lint, typecheck, format and build pass.
 
 ---
 

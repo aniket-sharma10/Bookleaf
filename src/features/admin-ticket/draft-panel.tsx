@@ -27,12 +27,12 @@ export function DraftPanel({
   draft,
   drafting,
   error,
-  onRegenerate,
+  onRequestDraft,
 }: {
   draft: AiDraft | null;
   drafting: boolean;
   error: string | null;
-  onRegenerate: () => void;
+  onRequestDraft: () => void;
 }) {
   if (drafting) {
     return (
@@ -58,7 +58,7 @@ export function DraftPanel({
             type="button"
             variant="outline"
             size="sm"
-            onClick={onRegenerate}
+            onClick={onRequestDraft}
             className="mt-2 text-foreground"
           >
             <RotateCw aria-hidden />
@@ -69,7 +69,25 @@ export function DraftPanel({
     );
   }
 
-  if (!draft) return null;
+  if (!draft) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed px-4 py-3">
+        <p className="text-sm text-muted-foreground">
+          Want a starting point? Get an AI draft based on this ticket and
+          BookLeaf&apos;s policies.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onRequestDraft}
+        >
+          <Sparkles aria-hidden />
+          Draft with AI
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 rounded-lg border border-primary/20 bg-accent/40 p-4">
@@ -88,7 +106,7 @@ export function DraftPanel({
           type="button"
           variant="outline"
           size="sm"
-          onClick={onRegenerate}
+          onClick={onRequestDraft}
         >
           <RotateCw aria-hidden />
           Regenerate

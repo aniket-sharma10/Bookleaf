@@ -12,23 +12,18 @@ import {
 import { TicketStatus } from "@/generated/prisma/enums";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
 import type { AdminTicketDetail, AiDraft, SentReply } from "@/lib/api-types";
+import { shouldAutoDraft, usableDraft } from "@/lib/drafts";
 import { STATUS_LABELS } from "@/lib/labels";
 
 import { DraftPanel } from "./draft-panel";
 import { TextForm } from "./text-form";
 
-/** A usable draft: one that exists and predates no newer message. */
-function freshDraft(ticket: AdminTicketDetail): AiDraft | null {
-  return ticket.latestDraft && !ticket.latestDraft.stale
-    ? ticket.latestDraft
-    : null;
-}
-
 /**
  * Reply to the author (MGMT-04), with an AI draft to start from (DRAFT-01).
- * Opening a ticket without a usable draft requests one, once. The draft only
- * fills an empty editor, so it never overwrites what the admin has typed,
- * and nothing is sent without the admin pressing Send (DRAFT-02).
+ * The first open of an unanswered ticket requests a draft by itself, once;
+ * after that the admin asks for one. A draft never replaces text the admin
+ * has typed without asking, and nothing is sent without the admin pressing
+ * Send (DRAFT-02).
  */
 export function ReplyComposer({
   ticket,
@@ -38,7 +33,7 @@ export function ReplyComposer({
   onSent: () => Promise<unknown>;
 }) {
   const [statusAfter, setStatusAfter] = useState(""); // "" = automatic (MGMT-05)
-  const initial = freshDraft(ticket);
+  const initial = usableDraft(ticket);
   const [body, setBody] = useState(initial?.body ?? "");
   // The draft the editor text started from; sent as aiDraftId (DRAFT-03).
   const [draft, setDraft] = useState<AiDraft | null>(initial);
@@ -49,15 +44,19 @@ export function ReplyComposer({
     (url: string) => apiRequest<AiDraft>(url, { method: "POST" }),
   );
 
-  async function requestDraft(replaceText: boolean) {
+  /**
+   * Requests a new draft. It goes into the editor if the editor is empty or
+   * still holds `replaceable` (the text the admin agreed to replace), so
+   * anything typed while the draft is generated is kept.
+   */
+  async function requestDraft(replaceable: string) {
     setDraftError(null);
     try {
       const fresh = await trigger();
       if (!fresh) return;
       setDraft(fresh);
-      // Fill the editor only if it's empty, or the admin chose to replace it.
       setBody((current) =>
-        replaceText || current.trim() === "" ? fresh.body : current,
+        current.trim() === "" || current === replaceable ? fresh.body : current,
       );
       await onSent(); // refresh the ticket so latestDraft is current
     } catch (error) {
@@ -69,25 +68,31 @@ export function ReplyComposer({
     }
   }
 
-  // Ask for a draft once per opened ticket when there's no usable one.
+  // The automatic draft for a first response. `autoDrafting` is set from the
+  // first render, so the panel shows "Drafting…" at once rather than the
+  // Draft with AI button.
+  const [autoDrafting, setAutoDrafting] = useState(() =>
+    shouldAutoDraft(ticket),
+  );
   const requested = useRef(false);
   useEffect(() => {
-    if (requested.current || freshDraft(ticket)) return;
+    if (!autoDrafting || requested.current) return;
     requested.current = true;
-    void requestDraft(false);
+    void requestDraft("").finally(() => setAutoDrafting(false));
     // Runs once per mounted composer (it is keyed by ticket ID).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function regenerate() {
-    const edited = draft !== null && body.trim() !== "" && body !== draft.body;
+  /** Draft with AI, Regenerate and Try again: asks before replacing the admin's own text. */
+  function requestNewDraft() {
+    const ownText = body.trim() !== "" && body !== draft?.body;
     if (
-      edited &&
+      ownText &&
       !window.confirm("Replace the text in the editor with a new AI draft?")
     ) {
       return;
     }
-    void requestDraft(true);
+    void requestDraft(body);
   }
 
   function changeBody(value: string) {
@@ -125,9 +130,9 @@ export function ReplyComposer({
       </h2>
       <DraftPanel
         draft={draft}
-        drafting={drafting}
+        drafting={drafting || autoDrafting}
         error={draftError}
-        onRegenerate={regenerate}
+        onRequestDraft={requestNewDraft}
       />
       <TextForm
         id="reply-body"

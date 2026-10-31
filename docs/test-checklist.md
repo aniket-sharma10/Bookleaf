@@ -73,7 +73,8 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] With AI enabled: a new ticket is classified within seconds; opening a ticket without a draft shows "Drafting…" and then fills the editor with a draft greeting the author by first name.
 - [x] The draft panel lists what the reply promises and what to check before sending.
 - [x] "Regenerate" asks before replacing edited text; dismissing keeps the edits.
-- [x] A reply sent from a draft records the draft; the draft is then marked as written before the latest message.
+- [x] A reply sent from a draft records the draft. Afterwards the panel offers "Draft with AI", and reopening the ticket makes no AI call.
+- [x] A Resolved ticket with no reply doesn't draft by itself; "Draft with AI" asks before replacing typed text, and Cancel keeps it.
 - [x] "Retry AI classification" fills category and priority for an untriaged ticket and disappears.
 
 ## Near-real-time updates (RT-01, RT-02)

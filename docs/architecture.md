@@ -254,7 +254,7 @@ Thinking cannot be switched off on these models, and thinking tokens are billed 
 
 **No pattern-based post-check** (ADR-0010). The admin sees the model's `commitments` and `needsVerification` as "Promises in this reply" and "Check before sending" next to the editor, and nothing is sent without their explicit Send. A second model call to review drafts is the upgrade path if drafts were ever sent without review.
 
-**Caching and cost:** drafts are generated on first open, persisted, and regenerated only on the admin's explicit request. A draft is marked stale when newer messages exist. There is no full-history or full-KB prompt and no embeddings.
+**Caching and cost:** a draft is generated automatically only on the first open of a ticket that is Open or In Progress, has no reply yet and has no draft yet (`shouldAutoDraft` in `lib/drafts.ts`). Drafts are persisted, and the latest one is reused until a message is sent after it (it is then stale). After that, and on Resolved or Closed tickets, drafts come only from the admin's explicit "Draft with AI" or "Regenerate". There is no full-history or full-KB prompt and no embeddings.
 
 **Failure:** the endpoint returns 503 `AI_UNAVAILABLE`, the UI shows a banner, and the editor stays usable.
 
