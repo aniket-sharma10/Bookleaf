@@ -16,6 +16,7 @@ import type {
 } from "@/lib/schemas/tickets";
 import { aiUnavailable } from "@/server/ai/client";
 import { classifyTicket } from "@/server/ai/classify";
+import { toAiDraft } from "@/server/ai/draft";
 import { getDb } from "@/server/db";
 import { NotFoundError, ValidationError } from "@/server/http/errors";
 
@@ -147,6 +148,20 @@ const detailSelect = {
     },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   },
+  aiDrafts: {
+    select: {
+      id: true,
+      body: true,
+      commitments: true,
+      needsVerification: true,
+      warnings: true,
+      model: true,
+      promptVersion: true,
+      createdAt: true,
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 1,
+  },
 } satisfies Prisma.TicketSelect;
 
 /** One ticket with its full context for the admin view (QUEUE-01, MGMT-02). */
@@ -159,7 +174,11 @@ export async function getTicketForAdmin(
   });
   if (!row) throw new NotFoundError("Ticket not found.");
 
-  const { internalNotes, messages, book, ...ticket } = row;
+  const { internalNotes, messages, book, aiDrafts, ...ticket } = row;
+  const draft = aiDrafts[0];
+  // Stale: a message was sent after the draft, so it may no longer fit.
+  const stale =
+    draft !== undefined && messages.some((m) => m.createdAt > draft.createdAt);
   return {
     ...ticket,
     classifiedAt: ticket.classifiedAt?.toISOString() ?? null,
@@ -174,7 +193,7 @@ export async function getTicketForAdmin(
       ...n,
       createdAt: n.createdAt.toISOString(),
     })),
-    latestDraft: null,
+    latestDraft: draft ? toAiDraft(draft, stale) : null,
   };
 }
 

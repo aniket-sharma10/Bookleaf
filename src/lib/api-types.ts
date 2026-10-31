@@ -145,8 +145,25 @@ export type AdminTicketDetail = {
   assignee: { id: string; name: string } | null;
   messages: AdminTicketMessage[];
   notes: InternalNote[];
-  /** The current AI draft; always null until AI drafting exists. */
-  latestDraft: null;
+  /** The latest AI draft for this ticket, if one has been generated. */
+  latestDraft: AiDraft | null;
+};
+
+/** An AI-drafted reply for the admin to edit; never sent automatically. */
+export type AiDraft = {
+  id: string;
+  body: string;
+  /** Actions the reply says BookLeaf will take: the admin confirms them. */
+  commitments: string[];
+  /** Facts the admin must check before sending. */
+  needsVerification: string[];
+  /** Automatic safety-check findings (T5.7). */
+  warnings: string[];
+  model: string;
+  promptVersion: string;
+  createdAt: string;
+  /** A message was sent after this draft was generated. */
+  stale: boolean;
 };
 
 /** POST /api/admin/tickets/:id/messages: the reply and the ticket's new status. */

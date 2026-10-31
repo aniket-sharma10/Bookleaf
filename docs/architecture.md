@@ -223,14 +223,14 @@ Thinking cannot be switched off on these models, and thinking tokens are billed 
 
 **Context builder** (`draft-context.ts`, deterministic and unit-tested). It includes only:
 1. Ticket subject and description (redacted, truncated), plus the last ≤3 author-visible replies (redacted, truncated; shown as "BookLeaf Support", never admin names) for follow-ups. **No internal notes.**
-2. No author name at all: the prompt asks for the literal greeting `[AUTHOR_FIRST_NAME]`, and code substitutes the first name after generation. No email, phone, city or IDs.
+2. No author name at all: the model writes only the body, and code adds the greeting with the author's first name and the sign-off after generation (any greeting or sign-off the model adds anyway is replaced). No email, phone, city or IDs.
 3. **Verified facts:** the selected book's record (title, status, ISBN, MRP, per-copy royalty, copies sold, earned, paid, pending, last payout or "none", platforms, print partner). For a General ticket it uses a compact list of the author's books instead (title, status, pending).
 4. **Derived facts** computed in `policies/royalty.ts`: the next upcoming payout deadline under the 45-day policy, author-level pending total versus the ₹1,000 threshold, never-paid flag, in-production stage.
 5. **KB sections** from the structured runtime module `knowledge-base.ts` (a concise summary of the brief's policy facts in our own words; requirements §14; no verbatim text and no added policies). The tone guidelines and company overview are always included. Only the policy section(s) mapped to the ticket's category, plus that category's handling guidance, are added. If the category is unknown, all policy sections are included. The whole structured KB is small (about 1k tokens), so selection is a proportionate optimisation and no retrieval infrastructure is needed.
 
 **Output schema:**
 ```ts
-{ reply: string;              // the draft, signed "BookLeaf Author Support"
+{ reply: string;              // the body only; code adds "Dear <first name>," and the sign-off
   commitments: string[];      // actions the reply says BookLeaf WILL take (escalate, re-sync, reprint after photos…)
   needsVerification: string[] // facts the admin must check before sending (bank details, payout status…)
 }
@@ -262,7 +262,7 @@ Limitation: if the function instance dies mid-task, the ticket stays `PENDING`. 
 Google's Gemini API terms for **unpaid** use (last modified 2026-04-28) let Google use submitted content and responses to improve its products, allow human reviewers to read them, and say "Do not submit sensitive, confidential, or personal information to the Unpaid Services." (Users in the EEA, Switzerland and the UK get paid-tier terms for free use.) Paid use: prompts and responses are not used to improve products.
 
 So every prompt is minimised by construction (`draft-context.ts`, `redact.ts`, tested on the whole serialised context):
-- Never sent: author name (placeholder substituted after generation), email, phone, city, any IDs, internal notes, assignee, admin names.
+- Never sent: author name (code adds the greeting after generation), email, phone, city, any IDs, internal notes, assignee, admin names.
 - Redacted in ticket text and replies: email addresses, phone numbers, long digit runs (9+ digits, not ISBN-formatted), and the ticket author's known name.
 - Sent because grounding needs it: the redacted ticket text, the referenced book's business facts (title, status, masked ISBN, figures, platforms), derived policy facts and KB sections.
 

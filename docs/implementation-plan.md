@@ -43,7 +43,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.3 | Classification service | T5.1, T5.2 | done |
 | T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | done |
 | T5.5 | Royalty policy facts and draft context builder | T5.2, T3.2 | done |
-| T5.6 | Draft service and endpoint | T5.1, T5.5, T4.2 | todo |
+| T5.6 | Draft service and endpoint | T5.1, T5.5, T4.2 | done |
 | T5.7 | Draft safety post-check | T5.6 | todo |
 | T5.8 | Admin draft UI | T5.6, T5.7, T4.8 | todo |
 | T5.9 | Live prompt evaluation script | T5.3, T5.6 | todo |
@@ -572,7 +572,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:**
   - `server/policies/royalty.ts`: `payoutDeadlineFor(date)` (next deadline 45 days after a quarter end: 15 May, 14 Aug, 14 Nov, 14 Feb), `neverPaid(book)`; threshold already exists.
   - `server/ai/redact.ts`: replaces email addresses, phone numbers and long digit runs (9+ digits, not ISBN-formatted) with placeholders, and the ticket author's known name with `[AUTHOR]`.
-  - `server/ai/draft-context.ts` `buildDraftContext(ticketId)`: ticket subject/description (redacted, truncated), the last ≤3 author-visible replies (redacted, truncated; sender shown as "BookLeaf Support", never admin names), the referenced book's verified fields (or a compact list for General), derived facts (payout deadline, threshold, never-paid, production stage), ticket status, and KB sections. Never: author name, email, phone, city, IDs, internal notes, assignee, admin names. The greeting uses the literal `[AUTHOR_FIRST_NAME]`, which code replaces after generation, so the name is never sent.
+  - `server/ai/draft-context.ts` `buildDraftContext(ticketId)`: ticket subject/description (redacted, truncated), the last ≤3 author-visible replies (redacted, truncated; sender shown as "BookLeaf Support", never admin names), the referenced book's verified fields (or a compact list for General), derived facts (payout deadline, threshold, never-paid, production stage), ticket status, and KB sections. Never: author name, email, phone, city, IDs, internal notes, assignee, admin names. Code adds the greeting with the first name after generation (T5.6), so the name is never sent.
 - **Acceptance:** unit tests: deadlines (2026-10-27 → 2026-11-14; 2026-12-10 → 2027-02-14); in-production book gives the stage and no MRP; below-threshold flag; General lists compact books; a test serialises the **whole** context and asserts that the author's name, email, phone, city, IDs, notes and admin names are absent and that a seeded email/phone in the ticket text is redacted; size bound.
 - **Verify:** `npm test`.
 - **Outcome (2026-10-31):**
@@ -584,8 +584,13 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Reqs:** DRAFT-01, DRAFT-04–09, AI-08
 - **Prereqs:** T5.1, T5.5, T4.2
 - **Scope:** `server/ai/draft.ts`: versioned system prompt (role, tone rules, guardrails from architecture §6.4, untrusted input in delimited blocks), schema `{reply, commitments[], needsVerification[]}` (reply ≤ 5,000 characters, ≤ 8 items each), thinking level `LOW` (raise to `MEDIUM` only if T5.9 shows quality problems). Persist an `AiDraft` with `promptVersion`. `POST /api/admin/tickets/[id]/drafts` (admin only, authz matrix). Admin detail returns the latest draft with a `stale` flag (a newer message exists).
-- **Acceptance:** fake-provider tests: stored and returned; `[AUTHOR_FIRST_NAME]` replaced; failure → 503 `AI_UNAVAILABLE` with nothing stored; prompt tests: the category's KB section is present, others absent, no notes or personal data; an author gets 403.
+- **Acceptance:** fake-provider tests: stored and returned; greeting with the first name and sign-off added by code; failure → 503 `AI_UNAVAILABLE` with nothing stored; prompt tests: the category's KB section is present, others absent, no notes or personal data; an author gets 403.
 - **Verify:** `npm test`. Manual check with the real key on 3 categories (subject to the owner's data decision; otherwise on a synthetic ticket).
+- **Outcome (2026-10-31):**
+  - `server/ai/draft.ts`: `DRAFT_SYSTEM_PROMPT` (`draft-v1`, 9 rules), `draftSchema`, `generateDraft`, `personalise`, `toAiDraft`. `POST /api/admin/tickets/[id]/drafts` → 201 `AiDraft`; admin detail returns the latest draft with `stale` (a message after it). AI failures → 503 with the per-kind message; nothing stored.
+  - Live (local Docker dev DB, real key, made-up ticket text on real books), each about 2 s: royalty for AUTH009 used the real figures, the 14 Nov 2026 policy deadline and the ₹1,000 roll-over, never called the payment overdue, and put bank details and payout records in `needsVerification`; ISBN committed to escalation with 48 hours; printing asked for photos and promised a free reprint once verified, 5–7 business days.
+  - The first live run greeted "Dear Author,": the prompt both asked for a placeholder greeting and said never to copy placeholders. Fixed by design: the model writes only the body; code adds "Dear <first name>," and the sign-off and strips any it added. Re-checked live ("Dear Priya,", one greeting, one sign-off).
+  - Tests: 9 new (generation and storage, prompt guardrails and KB selection, privacy, latest/stale in detail, five failure kinds, 404/403/401, `personalise`) plus the matrix row; suite 344/344; build passes.
 
 ### T5.7 Draft safety post-check
 - **Reqs:** DRAFT-05

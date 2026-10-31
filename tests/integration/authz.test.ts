@@ -125,6 +125,13 @@ const MATRIX: MatrixEntry[] = [
     params: { id: "matrix-missing" },
     expected: { anonymous: 401, author: 403, admin: 404 },
   },
+  {
+    route: "admin/tickets/[id]/drafts",
+    method: "POST",
+    path: "/api/admin/tickets/matrix-missing/drafts",
+    params: { id: "matrix-missing" },
+    expected: { anonymous: 401, author: 403, admin: 404 },
+  },
 ];
 
 const API_DIR = resolve(process.cwd(), "src/app/api");
