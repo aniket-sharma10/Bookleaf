@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { GET as getTicket } from "@/app/api/admin/tickets/[id]/route";
+import {
+  GET as getTicket,
+  PATCH as patchTicket,
+} from "@/app/api/admin/tickets/[id]/route";
 import { GET as listQueue } from "@/app/api/admin/tickets/route";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { AdminTicketDetail, Page, QueueTicket } from "@/lib/api-types";
@@ -383,5 +386,98 @@ describe("GET /api/admin/tickets/:id", () => {
     expect(missing.status).toBe(404);
     expect((await detail(t.critical!, testAuthor)).status).toBe(403);
     expect((await detail(t.critical!, null)).status).toBe(401);
+  });
+});
+
+describe("PATCH /api/admin/tickets/:id", () => {
+  let id: string;
+  beforeAll(async () => {
+    const ticket = await db.ticket.create({
+      data: {
+        authorId: "A1",
+        bookId: "B1",
+        subject: "To be updated",
+        description: "Fixture ticket.",
+        category: "GENERAL_INQUIRY",
+        priority: "LOW",
+        aiCategory: "GENERAL_INQUIRY",
+        aiPriority: "LOW",
+        aiRationale: "Looks like a general question.",
+        classificationStatus: "SUCCEEDED",
+      },
+    });
+    id = ticket.id;
+  });
+
+  async function patch(
+    body: unknown,
+    user: Parameters<typeof requestAs>[0] = me,
+    ticketId = id,
+  ) {
+    return patchTicket(
+      await requestAs(user, `${BASE}/${ticketId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ id: ticketId }) },
+    );
+  }
+
+  async function dataOf(response: Response) {
+    expect(response.status).toBe(200);
+    return ((await response.json()) as { data: AdminTicketDetail }).data;
+  }
+
+  it("updates the status (MGMT-01)", async () => {
+    expect((await dataOf(await patch({ status: "IN_PROGRESS" }))).status).toBe(
+      "IN_PROGRESS",
+    );
+    expect((await dataOf(await patch({ status: "RESOLVED" }))).status).toBe(
+      "RESOLVED",
+    );
+  });
+
+  it("overrides category and priority but keeps the AI's suggestion (AI-03, AI-04)", async () => {
+    const data = await dataOf(
+      await patch({ category: "ISBN_METADATA", priority: "CRITICAL" }),
+    );
+    expect(data).toMatchObject({
+      category: "ISBN_METADATA",
+      priority: "CRITICAL",
+      aiCategory: "GENERAL_INQUIRY",
+      aiPriority: "LOW",
+      aiRationale: "Looks like a general question.",
+    });
+  });
+
+  it("assigns the ticket to the calling admin only (MGMT-03)", async () => {
+    const data = await dataOf(await patch({ assignToMe: true }));
+    expect(data.assignee).toEqual({ id: me.id, name: "Me Admin" });
+    // Only one field changed; the earlier overrides are untouched.
+    expect(data.priority).toBe("CRITICAL");
+  });
+
+  it("rejects other assignees, unknown fields, bad values and an empty body (400)", async () => {
+    for (const body of [
+      { assigneeId: otherAdminId },
+      { assignToMe: false },
+      { status: "DONE" },
+      { priority: null },
+      {},
+    ]) {
+      const response = await patch(body);
+      expect(response.status, JSON.stringify(body)).toBe(400);
+    }
+    const stored = await db.ticket.findUniqueOrThrow({ where: { id } });
+    expect(stored.assigneeId).toBe(me.id);
+  });
+
+  it("answers 404 for an unknown ticket, 403 for an author, 401 without a session", async () => {
+    expect((await patch({ status: "OPEN" }, me, "no-such-ticket")).status).toBe(
+      404,
+    );
+    expect((await patch({ status: "OPEN" }, testAuthor)).status).toBe(403);
+    expect((await patch({ status: "OPEN" }, null)).status).toBe(401);
   });
 });

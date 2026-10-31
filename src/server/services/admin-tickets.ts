@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
 import type { AdminTicketDetail, Page, QueueTicket } from "@/lib/api-types";
-import type { QueueQuery } from "@/lib/schemas/tickets";
+import type { QueueQuery, UpdateTicketInput } from "@/lib/schemas/tickets";
 import { getDb } from "@/server/db";
 import { NotFoundError } from "@/server/http/errors";
 
@@ -163,4 +163,28 @@ export async function getTicketForAdmin(
     })),
     latestDraft: null,
   };
+}
+
+/**
+ * Admin changes to a ticket (MGMT-01, MGMT-03, AI-03, AI-04). Category and
+ * priority overwrite the effective values only; the AI's suggestion fields
+ * are never touched, so overrides stay visible. `assignToMe` assigns the
+ * calling admin; there is no way to assign anyone else. An unknown ID is a
+ * 404 (Prisma P2025).
+ */
+export async function updateTicket(
+  ticketId: string,
+  { status, category, priority, assignToMe }: UpdateTicketInput,
+  adminId: string,
+): Promise<AdminTicketDetail> {
+  await getDb().ticket.update({
+    where: { id: ticketId },
+    data: {
+      status,
+      category,
+      priority,
+      ...(assignToMe ? { assigneeId: adminId } : {}),
+    },
+  });
+  return getTicketForAdmin(ticketId);
 }

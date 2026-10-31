@@ -33,7 +33,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.1 | Admin queue API with filters and sort | T3.4 | done |
 | T4.2 | Admin ticket detail API | T4.1 | done |
 | T4.3 | Admin queue UI | T4.1, T2.6 | todo |
-| T4.4 | Ticket update API (status, overrides, assign to self) | T4.2 | todo |
+| T4.4 | Ticket update API (status, overrides, assign to self) | T4.2 | done |
 | T4.5 | Internal notes API | T4.2 | todo |
 | T4.6 | Admin response API | T4.2 | todo |
 | T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | todo |
@@ -444,6 +444,9 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `PATCH /api/admin/tickets/[id]` accepts a partial body `{status, category, priority, assignToMe: true}`. `assignToMe` sets the assignee to the calling admin; there is no field for assigning anyone else (MGMT-03). AI suggestion fields are untouched.
 - **Acceptance:** tests cover each field, an unknown field such as `assigneeId` (400, strict schema), an empty body (400) and the AI-suggested values being preserved after an override.
 - **Verify:** integration tests.
+- **Outcome (2026-10-31):**
+  - `updateTicket` in `server/services/admin-tickets.ts` and `PATCH /api/admin/tickets/[id]`; returns the updated `AdminTicketDetail`. An unknown ID is 404 (Prisma P2025).
+  - Tests: 5 integration tests (status, overrides with AI values kept, assign to me, five rejected bodies, 404/403/401) plus the matrix row; suite 248/248; build passes.
 
 ### T4.5 Internal notes API
 - **Reqs:** MGMT-02, TICKET-08
