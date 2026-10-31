@@ -106,3 +106,11 @@ export function withApi<P extends RouteParams>(
 export function dataResponse(data: unknown, status = 200): Response {
   return Response.json({ data }, { status });
 }
+
+/** Paginated list envelope: `{ data, page, pageSize, total }`. */
+export function pageResponse(
+  data: unknown[],
+  { page, pageSize, total }: { page: number; pageSize: number; total: number },
+): Response {
+  return Response.json({ data, page, pageSize, total });
+}

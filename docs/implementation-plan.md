@@ -30,7 +30,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T3.5 | Author ticket read APIs | T3.4 | done |
 | T3.6 | New-ticket form UI | T2.6, T3.2, T3.4 | done |
 | T3.7 | My Tickets list and detail UI | T3.5, T2.6 | done |
-| T4.1 | Admin queue API with filters and sort | T3.4 | todo |
+| T4.1 | Admin queue API with filters and sort | T3.4 | done |
 | T4.2 | Admin ticket detail API | T4.1 | todo |
 | T4.3 | Admin queue UI | T4.1, T2.6 | todo |
 | T4.4 | Ticket update API (status, overrides, assign to self) | T4.2 | todo |
@@ -416,6 +416,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `server/services/admin-tickets.ts` `listQueue(query)`. Filters: status (multi), category, priority, `unclassified`, `assignee=me|none`, created-date `from`/`to` (inclusive, start and end of day in UTC). The default is unresolved. Sort: priority asc with nulls first, then createdAt asc. Pagination. Route `GET /api/admin/tickets`.
 - **Acceptance:** tests create a fixture set and assert each filter, the combination of filters, the default ordering (Critical before High before Low; older first within a priority; unclassified first) and invalid query handling (400).
 - **Verify:** integration tests. Update the authz matrix.
+- **Outcome (2026-10-31):**
+  - `server/services/admin-tickets.ts` `listQueue(query, adminId)` and `GET /api/admin/tickets` → `{ data: QueueTicket[], page, pageSize, total }` (`pageResponse` in `server/http/handler.ts`; types in `src/lib/api-types.ts`).
+  - "Needs triage" (`unclassified=true`) means no effective category **or** priority. Ordering is done in the database: priority ascending with nulls first, then oldest first, then ID.
+  - Tests: 11 integration tests over an 8-ticket fixture (each filter, combinations, inclusive UTC date bounds, ordering, paging, six invalid queries) plus the matrix row; suite 232/232; build passes.
 
 ### T4.2 Admin ticket detail API
 - **Reqs:** QUEUE-01, MGMT-02, DRAFT-01 (shape)

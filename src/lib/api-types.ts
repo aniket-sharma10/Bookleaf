@@ -1,4 +1,9 @@
-import type { TicketStatus } from "@/generated/prisma/enums";
+import type {
+  ClassificationStatus,
+  TicketCategory,
+  TicketPriority,
+  TicketStatus,
+} from "@/generated/prisma/enums";
 
 // Response shapes of the app's own API, shared by the services that build
 // them and the UI that reads them. Dates are strings: calendar dates as
@@ -71,4 +76,32 @@ export type AuthorTicketMessage = {
 /** GET /api/author/tickets/:id: the ticket and its reply thread, oldest first. */
 export type AuthorTicketDetail = AuthorTicket & {
   messages: AuthorTicketMessage[];
+};
+
+// ---------------------------------------------------------------------------
+// Admin
+// ---------------------------------------------------------------------------
+
+/** GET /api/admin/tickets: one row of the support queue (QUEUE-01). */
+export type QueueTicket = {
+  id: string;
+  subject: string;
+  status: TicketStatus;
+  /** Effective values; null until AI or an admin sets them ("Needs triage"). */
+  category: TicketCategory | null;
+  priority: TicketPriority | null;
+  classificationStatus: ClassificationStatus;
+  author: { id: string; name: string };
+  book: { id: string; title: string } | null;
+  assignee: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** List envelope: `{ data, page, pageSize, total }` (architecture §4). */
+export type Page<T> = {
+  data: T[];
+  page: number;
+  pageSize: number;
+  total: number;
 };
