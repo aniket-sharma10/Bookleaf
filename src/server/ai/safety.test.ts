@@ -16,6 +16,7 @@ const context: DraftContext = {
       "ISBN: 978-93-5XXXX-01-1",
       "Copies sold: 34",
       "Royalty earned: ₹850",
+      "Royalty paid: ₹6,000",
       "Royalty pending: ₹850",
       "Next royalty payout deadline under the policy: 14 Nov 2026 (for the quarter ending 30 Sept 2026).",
     ].join("\n"),
@@ -96,6 +97,23 @@ describe("checkDraft", () => {
     ]) {
       expect(checkDraft(wrap(phrase), context), phrase).toEqual([]);
     }
+  });
+
+  it("accepts 'has been paid' only for an amount the facts record as paid", () => {
+    expect(
+      checkDraft(
+        wrap("Of your earnings, ₹6,000 has been paid so far."),
+        context,
+      ),
+    ).toEqual([]);
+    expect(
+      checkDraft(wrap("Your pending ₹850 has been paid."), context),
+    ).toEqual([
+      expect.stringMatching(/"has been paid" says an action already happened/),
+    ]);
+    expect(
+      checkDraft(wrap("Your royalty has been paid."), context),
+    ).toHaveLength(1);
   });
 
   it("flags calling a payment overdue or late", () => {

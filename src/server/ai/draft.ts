@@ -6,15 +6,23 @@ import { getDb } from "@/server/db";
 import { NotFoundError } from "@/server/http/errors";
 
 import { aiUnavailable, generateLogged, getGenerator } from "./client";
-import { buildDraftContext, renderDraftUserTurn } from "./draft-context";
-import { AiError, type StructuredGenerator } from "./provider";
+import {
+  buildDraftContext,
+  type DraftContext,
+  renderDraftUserTurn,
+} from "./draft-context";
+import {
+  AiError,
+  type GenerateRequest,
+  type StructuredGenerator,
+} from "./provider";
 import { checkDraft } from "./safety";
 
 // AI-drafted replies (DRAFT-01, DRAFT-04–09). The model writes; an admin
 // reviews, edits and sends. Nothing here ever reaches an author by itself.
 
 /** Bump when the prompt or schema changes; stored on drafts and call logs. */
-export const DRAFT_PROMPT_VERSION = "draft-v1";
+export const DRAFT_PROMPT_VERSION = "draft-v2";
 
 /** Added by code, so the author's name never goes to the model. */
 const SIGN_OFF = "Warm regards,\nBookLeaf Author Support";
@@ -96,6 +104,18 @@ export function toAiDraft(row: DraftRow, stale: boolean): AiDraft {
   };
 }
 
+/** The complete model request for a draft (also used by the eval script). */
+export function draftRequest(
+  context: DraftContext,
+): GenerateRequest<DraftOutput> {
+  return {
+    task: "DRAFT",
+    system: DRAFT_SYSTEM_PROMPT,
+    user: renderDraftUserTurn(context),
+    schema: draftSchema,
+  };
+}
+
 /**
  * Generates and stores a draft for a ticket (DRAFT-01). Any AI failure is a
  * 503 AI_UNAVAILABLE with nothing stored, and the manual composer keeps
@@ -112,10 +132,7 @@ export async function generateDraft(
   let output: DraftOutput;
   try {
     ({ data: output } = await generateLogged<DraftOutput>(generator, {
-      task: "DRAFT",
-      system: DRAFT_SYSTEM_PROMPT,
-      user: renderDraftUserTurn(context),
-      schema: draftSchema,
+      ...draftRequest(context),
       promptVersion: DRAFT_PROMPT_VERSION,
       ticketId,
     }));

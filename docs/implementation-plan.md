@@ -46,7 +46,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.6 | Draft service and endpoint | T5.1, T5.5, T4.2 | done |
 | T5.7 | Draft safety post-check | T5.6 | done |
 | T5.8 | Admin draft UI | T5.6, T5.7, T4.8 | done |
-| T5.9 | Live prompt evaluation script | T5.3, T5.6 | todo |
+| T5.9 | Live prompt evaluation script | T5.3, T5.6 | done |
 | T6.1 | Polling for near-real-time updates | T3.7, T4.3, T4.8 | todo |
 | T6.2 | Integration and error-state pass | T6.1, T5.8 | todo |
 | T6.3 | AI failure drill | T6.2 | todo |
@@ -623,6 +623,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - Tone is reviewed manually.
 - **Acceptance:** every category exact, both ordering checks pass, all automatic draft checks pass; any failure is analysed and the prompt adjusted, or the reason documented. About 16–20 API calls per run.
 - **Verify:** run once; save a summary to `docs/ai-eval.md` (case IDs, expected vs actual, pass/fail, tokens; no prompt or dataset text).
+- **Outcome (2026-10-31):**
+  - `scripts/ai-eval.ts` (`npm run ai:eval`): 10 cases (incl. a prompt-injection ticket), 43 checks, about 18 live calls, synthetic tickets and books only; writes `docs/ai-eval.md`. Uses the app's own request builders (`classificationRequest`, `draftRequest`, new pure `assembleDraftContext`), so it tests exactly what the app sends. Pacing: 4 s between calls and one 30 s retry on a rate limit (evaluation only; the app never retries a 429).
+  - Run history (outputs vary at the recommended default temperature): run 1 41/43: one unsupported number (correctly flagged) and a **false positive** for "₹6,000 has been paid" although the facts record that payment, fixed in `safety.ts` (a payment phrase passes only when the amount equals a recorded paid amount; tested). Run 2 42/43: the payout date was omitted, so the royalty guidance now says to always state it (`draft-v2`). Run 3 38/40 (rate limited, plus a too-narrow "verif" keyword check, broadened to verify/confirm/review/check). Run 4 42/43: the breakdown offer was omitted, so the guidance now says to always offer it. **Final run 43/43** (`classify-v1`, `draft-v2`).
+  - Tone reviewed manually on the live drafts read during T5.6–T5.9 (royalty, ISBN, printing, distribution, production): empathetic, acknowledges first, uses the given figures, own-the-mistake wording, ends with a next step.
+  - **Phase 5 gate met:** with the key, new tickets are classified and admins get grounded drafts; with AI disabled, failing or rate-limited, creation and manual handling still work and the UI explains the state (T5.4, T5.8); all automated AI tests run offline with fakes. Suite 354/354; build passes.
 
 ---
 

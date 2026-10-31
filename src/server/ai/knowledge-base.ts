@@ -149,10 +149,10 @@ export function sectionsForCategory(
 export const CATEGORY_GUIDANCE: Record<TicketCategory, string[]> = {
   ROYALTY_PAYMENTS: [
     "Acknowledge the concern, then explain the quarterly cycle and that payment is due within 45 days of the quarter's end.",
-    "If the facts give the next payout deadline, state it as the date by which the payout is due.",
+    "Always state the next payout deadline given in the facts, as the date by which that quarter's payout is due.",
     "Payout details aren't visible to us: ask the author to confirm their bank account is linked, and list the bank details and the payout status under needsVerification.",
     "Never say a payment is overdue, scheduled, sent or received unless the facts say so. Offer to check the payout status; only a confirmed overdue payment justifies promising resolution within 48 hours.",
-    "If the author thinks the amount is too low, explain the net-profit formula without being defensive and offer a detailed line-by-line breakdown.",
+    "If the author thinks the amount is too low, explain the net-profit formula without being defensive, and always offer to share a detailed line-by-line royalty breakdown.",
     "If pending royalties are below the ₹1,000 minimum, explain that they roll over to the next quarter.",
   ],
   ISBN_METADATA: [

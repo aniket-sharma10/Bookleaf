@@ -38,8 +38,32 @@ function allMatches(text: string, pattern: RegExp): string[] {
   return [...text.matchAll(pattern)].map((match) => match[0]);
 }
 
+const PAYMENT_VERB = /\b(?:paid|credited|transferred)\b/i;
+const RECORDED_PAYMENT = /Royalty paid: ₹([\d,]+)/g;
+
+/**
+ * A "has been paid" phrase restates a fact when the ₹ amount just before it
+ * equals a payment the verified facts record (e.g. "₹6,000 has been paid"
+ * with "Royalty paid: ₹6,000"). Anything else is still flagged.
+ */
+function isRecordedPayment(
+  reply: string,
+  start: number,
+  phrase: string,
+  paidAmounts: Set<string>,
+): boolean {
+  if (!PAYMENT_VERB.test(phrase)) return false;
+  const before = reply.slice(Math.max(0, start - 40), start);
+  const amounts = [...before.matchAll(MONEY)].map((m) => digitsOf(m[1]!));
+  const nearest = amounts.at(-1);
+  return nearest !== undefined && nearest !== "0" && paidAmounts.has(nearest);
+}
+
 /** "Already happened" phrases, each reported once (longest overlapping match). */
-function completedActionPhrases(reply: string): string[] {
+function completedActionPhrases(
+  reply: string,
+  paidAmounts: Set<string>,
+): string[] {
   const found = COMPLETED_ACTION.flatMap((pattern) =>
     [...reply.matchAll(pattern)].map((m) => ({
       start: m.index,
@@ -52,7 +76,9 @@ function completedActionPhrases(reply: string): string[] {
     const last = kept.at(-1);
     if (!last || match.start >= last.end) kept.push(match);
   }
-  return kept.map((match) => match.text);
+  return kept
+    .filter((m) => !isRecordedPayment(reply, m.start, m.text, paidAmounts))
+    .map((match) => match.text);
 }
 
 /** Returns warnings for the admin; an empty list means nothing was found. */
@@ -106,7 +132,12 @@ export function checkDraft(reply: string, context: DraftContext): string[] {
     }
   }
 
-  for (const phrase of completedActionPhrases(reply)) {
+  const paidAmounts = new Set(
+    [...context.blocks.verified_facts.matchAll(RECORDED_PAYMENT)].map((m) =>
+      digitsOf(m[1]!),
+    ),
+  );
+  for (const phrase of completedActionPhrases(reply, paidAmounts)) {
     warnings.add(
       `"${phrase}" says an action already happened, but the app has no record of it. Rephrase it as a commitment, or confirm it was done.`,
     );

@@ -11,7 +11,7 @@ import {
   neverPaid,
   payoutDeadlineFor,
 } from "@/server/policies/royalty";
-import { toAuthorBook } from "@/server/services/books";
+import { bookSelect, toAuthorBook } from "@/server/services/books";
 
 import { guidanceForCategory, sectionsForCategory } from "./knowledge-base";
 import { clip, type KnownNames, redact, stripDelimiters } from "./redact";
@@ -83,65 +83,41 @@ function knowledgeText(category: TicketCategory | null): string {
   return sections.join("\n\n");
 }
 
-/** Builds the context for a ticket's draft, or null if the ticket is gone. */
-export async function buildDraftContext(
-  ticketId: string,
-  today: Date = new Date(),
-): Promise<DraftContext | null> {
-  const db = getDb();
-  const ticket = await db.ticket.findUnique({
-    where: { id: ticketId },
-    select: {
-      subject: true,
-      description: true,
-      status: true,
-      category: true,
-      bookId: true,
-      authorId: true,
-      author: { select: { name: true } },
-      messages: {
-        select: {
-          body: true,
-          createdAt: true,
-          sender: { select: { name: true, role: true } },
-        },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        take: LIMITS.replies,
-      },
-    },
-  });
-  if (!ticket) return null;
+/** Everything a draft context is assembled from (all from verified data). */
+export type DraftContextInput = {
+  ticket: {
+    subject: string;
+    description: string;
+    status: keyof typeof STATUS_LABELS;
+    category: TicketCategory | null;
+    bookId: string | null;
+  };
+  authorName: string;
+  /** All of the ticket author's books (never anyone else's). */
+  books: BookFacts[];
+  /** Newest first, as loaded; at most the last few are used. */
+  messages: {
+    body: string;
+    createdAt: Date;
+    sender: { name: string; role: "AUTHOR" | "ADMIN" };
+  }[];
+  today: Date;
+};
 
-  // Only the ticket author's own books, never anyone else's (AUTH-06).
-  const books = (
-    await db.book.findMany({
-      where: { authorId: ticket.authorId },
-      orderBy: { id: "asc" },
-      select: {
-        id: true,
-        title: true,
-        isbn: true,
-        genre: true,
-        publicationDate: true,
-        status: true,
-        mrp: true,
-        authorRoyaltyPerCopy: true,
-        totalCopiesSold: true,
-        totalRoyaltyEarned: true,
-        royaltyPaid: true,
-        royaltyPending: true,
-        lastRoyaltyPayoutDate: true,
-        printPartner: true,
-        availableOn: true,
-      },
-    })
-  ).map(toAuthorBook);
-
+/** Pure assembly of the prompt blocks (testable and usable without a database). */
+export function assembleDraftContext({
+  ticket,
+  authorName,
+  books,
+  messages,
+  today,
+}: DraftContextInput): DraftContext {
+  const recent = messages.slice(0, LIMITS.replies);
   const names: KnownNames = {
-    author: ticket.author.name,
+    author: authorName,
     staff: [
       ...new Set(
-        ticket.messages
+        recent
           .filter((m) => m.sender.role === "ADMIN")
           .map((m) => m.sender.name),
       ),
@@ -157,8 +133,8 @@ export async function buildDraftContext(
     clean(ticket.description, LIMITS.description),
   ].join("\n");
 
-  const repliesBlock = ticket.messages.length
-    ? [...ticket.messages]
+  const repliesBlock = recent.length
+    ? [...recent]
         .reverse()
         .map(
           (m) =>
@@ -193,7 +169,7 @@ export async function buildDraftContext(
 
   return {
     category: ticket.category,
-    authorFirstName: ticket.author.name.trim().split(/\s+/)[0] ?? "",
+    authorFirstName: authorName.trim().split(/\s+/)[0] ?? "",
     blocks: {
       ticket: ticketBlock,
       previous_replies: repliesBlock,
@@ -201,6 +177,53 @@ export async function buildDraftContext(
       knowledge_base: knowledgeText(ticket.category),
     },
   };
+}
+
+/** Loads a ticket's data and assembles its draft context; null if it's gone. */
+export async function buildDraftContext(
+  ticketId: string,
+  today: Date = new Date(),
+): Promise<DraftContext | null> {
+  const db = getDb();
+  const ticket = await db.ticket.findUnique({
+    where: { id: ticketId },
+    select: {
+      subject: true,
+      description: true,
+      status: true,
+      category: true,
+      bookId: true,
+      authorId: true,
+      author: { select: { name: true } },
+      messages: {
+        select: {
+          body: true,
+          createdAt: true,
+          sender: { select: { name: true, role: true } },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: LIMITS.replies,
+      },
+    },
+  });
+  if (!ticket) return null;
+
+  // Only the ticket author's own books, never anyone else's (AUTH-06).
+  const books = (
+    await db.book.findMany({
+      where: { authorId: ticket.authorId },
+      orderBy: { id: "asc" },
+      select: bookSelect,
+    })
+  ).map(toAuthorBook);
+
+  return assembleDraftContext({
+    ticket,
+    authorName: ticket.author.name,
+    books,
+    messages: ticket.messages,
+    today,
+  });
 }
 
 /** The user turn: each block wrapped in its tag. */

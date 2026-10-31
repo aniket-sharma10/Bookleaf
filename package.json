@@ -20,7 +20,8 @@
     "db:down": "docker compose down",
     "db:seed": "prisma db seed",
     "db:verify": "tsx --conditions=react-server prisma/verify.ts",
-    "ai:smoke": "tsx --conditions=react-server scripts/ai-smoke.ts"
+    "ai:smoke": "tsx --conditions=react-server scripts/ai-smoke.ts",
+    "ai:eval": "tsx --conditions=react-server scripts/ai-eval.ts"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
