@@ -50,7 +50,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T6.1 | Polling for near-real-time updates | T3.7, T4.3, T4.8 | done |
 | T6.2 | Integration and error-state pass | T6.1, T5.8 | done |
 | T6.3 | AI failure drill | T6.2 | done |
-| T7.1 | Full quality gate | T6.3 | todo |
+| T7.1 | Full quality gate | T6.3 | done |
 | T7.2 | Security review | T7.1 | todo |
 | T7.3 | Manual end-to-end checklist | T7.1 | todo |
 | T7.4 | Production deployment and seed | T7.2, T7.3 | todo |
@@ -682,6 +682,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Prereqs:** T6.3
 - **Scope:** run `lint`, `typecheck`, `format:check`, `test` and `build` clean. Remove dead code. Check that comments explain the "why" where it is non-obvious.
 - **Verify:** run the `verify-delivery` skill.
+- **Outcome (2026-10-31):**
+  - Gate clean: lint, typecheck, format:check, test (360/360) and build. Dead-code scan (every export and every file's importers): only `components/ui/card.tsx` and `badge.tsx` were unused, and were removed. The "why" comments cover the security checks, AI guardrails and policy maths.
+  - `verify-delivery` (run by the owner): automated checks pass; `db:verify` passes on Neon; no confidential or secret files tracked or in history; 55/63 Mandatory/Derived requirements evidenced. The open items are the planned deliverables: live URL (T7.4), `docs/api.md` and README sections (T7.5), write-up (T7.6), collaborator, visibility and push (T7.7). The DEL-09 gap (`PRISMA_ALLOW_REMOTE_DATABASE` missing from `.env.example`) is fixed here.
+  - Also corrected the stale commit rule in "Local development workflow" below.
 
 ### T7.2 Security review
 - **Reqs:** AUTH-\*, AI-09, API-05, DEL-09
@@ -756,7 +760,7 @@ These are not required and should only be picked up if mandatory work is complet
 **Local development workflow.**
 1. `docker compose up -d` (starts only the `bookleaf-*` containers), then `npm run dev`.
 2. Work task by task (ask in plain language, e.g. "implement T2.1"; the `implement-task` skill applies). Check prerequisites, implement, run the standard checks from `CLAUDE.md`, update this board, then stop for the owner's review.
-3. One commit per task, with a message that references the task ID. The owner commits, or Claude does only when explicitly asked; Claude never stages, commits or pushes on its own.
+3. One commit per finished task, in the owner's Conventional Commits style (see `CLAUDE.md` § Task boundaries). Nothing is pushed unless the owner asks.
 4. Use the real Gemini key only for manual checks and `ai-eval`. All tests use fakes.
 
 **Keeping to a few focused sessions** (grouping, not estimates):
