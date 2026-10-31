@@ -75,3 +75,10 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] "Regenerate" asks before replacing edited text; dismissing keeps the edits.
 - [x] A reply sent from a draft records the draft; the draft is then marked as written before the latest message.
 - [x] "Retry AI classification" fills category and priority for an untriaged ticket and disappears.
+
+## Near-real-time updates (RT-01, RT-02)
+
+- [x] With the author's ticket open in one browser, an admin reply (and status change) sent from another appears within about 5 s, without a reload.
+- [x] A ticket raised by an author appears in an open admin queue within about 15 s.
+- [x] Text being typed in the admin reply box is never replaced by a refresh.
+- [x] If a refresh fails, the page stays (with "Couldn't refresh just now…") and recovers by itself.

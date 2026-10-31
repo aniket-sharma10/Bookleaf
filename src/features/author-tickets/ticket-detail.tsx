@@ -6,11 +6,12 @@ import useSWR from "swr";
 
 import { BrandMark } from "@/components/brand-mark";
 import { EmptyState } from "@/components/empty-state";
-import { ErrorState } from "@/components/error-state";
+import { ErrorState, RefreshFailedNotice } from "@/components/error-state";
 import { TicketStatusBadge } from "@/components/ticket-status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiClientError, fetcher } from "@/lib/api-client";
+import { POLL_MS } from "@/lib/polling";
 import type { AuthorTicketDetail, AuthorTicketMessage } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
 import { GENERAL_BOOK_LABEL } from "@/lib/labels";
@@ -73,9 +74,10 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
   const { data, error, isLoading, mutate } = useSWR<AuthorTicketDetail>(
     `/api/author/tickets/${encodeURIComponent(ticketId)}`,
     fetcher,
+    { refreshInterval: POLL_MS.authorTickets },
   );
 
-  if (error instanceof ApiClientError && error.status === 404) {
+  if (!data && error instanceof ApiClientError && error.status === 404) {
     return (
       <>
         <BackLink />
@@ -91,7 +93,7 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
       </>
     );
   }
-  if (error) {
+  if (error && !data) {
     return (
       <>
         <BackLink />
@@ -111,6 +113,7 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
   return (
     <>
       <BackLink />
+      {error ? <RefreshFailedNotice /> : null}
       <header className="mb-8">
         <div className="flex flex-wrap items-start gap-3">
           <h1 className="flex-1 font-heading text-3xl font-semibold tracking-tight text-balance">

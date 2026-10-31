@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (owner, 2026-10-30)
 - **Date:** 2026-10-27
-- **Implementation:** not started (T6.1). SWR is not installed yet.
+- **Implementation:** implemented (T6.1): `src/lib/polling.ts` and SWR `refreshInterval` in the four live views.
 - **Requirements:** RT-01, RT-02
 
 ## Context

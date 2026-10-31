@@ -6,7 +6,7 @@ import useSWR from "swr";
 
 import { BrandMark } from "@/components/brand-mark";
 import { EmptyState } from "@/components/empty-state";
-import { ErrorState } from "@/components/error-state";
+import { ErrorState, RefreshFailedNotice } from "@/components/error-state";
 import {
   AgeBadge,
   NeedsTriageBadge,
@@ -16,6 +16,7 @@ import { TicketStatusBadge } from "@/components/ticket-status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMinuteClock } from "@/hooks/use-minute-clock";
 import { ApiClientError, fetcher } from "@/lib/api-client";
+import { POLL_MS } from "@/lib/polling";
 import type { AdminTicketDetail, AdminTicketMessage } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
 import { CATEGORY_LABELS, GENERAL_BOOK_LABEL } from "@/lib/labels";
@@ -89,9 +90,10 @@ export function AdminTicketView({
   const { data, error, isLoading, mutate } = useSWR<AdminTicketDetail>(
     `/api/admin/tickets/${encodeURIComponent(ticketId)}`,
     fetcher,
+    { refreshInterval: POLL_MS.adminTicket },
   );
 
-  if (error instanceof ApiClientError && error.status === 404) {
+  if (!data && error instanceof ApiClientError && error.status === 404) {
     return (
       <>
         <BackLink />
@@ -103,7 +105,7 @@ export function AdminTicketView({
       </>
     );
   }
-  if (error) {
+  if (error && !data) {
     return (
       <>
         <BackLink />
@@ -127,6 +129,7 @@ export function AdminTicketView({
   return (
     <>
       <BackLink />
+      {error ? <RefreshFailedNotice /> : null}
       <header className="mb-8">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <TicketStatusBadge status={data.status} />

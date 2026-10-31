@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 
 import { EmptyState } from "@/components/empty-state";
-import { ErrorState } from "@/components/error-state";
+import { ErrorState, RefreshFailedNotice } from "@/components/error-state";
 import {
   AgeBadge,
   NeedsTriageBadge,
@@ -28,6 +28,7 @@ import {
   TicketStatus,
 } from "@/generated/prisma/enums";
 import { pageFetcher } from "@/lib/api-client";
+import { POLL_MS } from "@/lib/polling";
 import type { Page, QueueTicket } from "@/lib/api-types";
 import {
   CATEGORY_LABELS,
@@ -142,7 +143,7 @@ export function AdminQueue({ adminId }: { adminId: string }) {
     `/api/admin/tickets${search ? `?${search}` : ""}`,
     pageFetcher<QueueTicket>,
     // Keep showing the current rows while a new filter loads.
-    { keepPreviousData: true },
+    { keepPreviousData: true, refreshInterval: POLL_MS.adminQueue },
   );
 
   /** Changes some filters; any filter change goes back to page 1. */
@@ -280,7 +281,7 @@ export function AdminQueue({ adminId }: { adminId: string }) {
         </div>
       </div>
 
-      {error ? (
+      {error && !data ? (
         <ErrorState error={error} onRetry={() => mutate()} />
       ) : isLoading || !data ? (
         <QueueSkeleton />
@@ -300,6 +301,7 @@ export function AdminQueue({ adminId }: { adminId: string }) {
         />
       ) : (
         <>
+          {error ? <RefreshFailedNotice /> : null}
           <QueueTable tickets={data.data} adminId={adminId} />
           <Pagination
             page={data}

@@ -58,3 +58,19 @@ export function ErrorState({
     </Alert>
   );
 }
+
+/**
+ * Shown when a background refresh fails but earlier data is still on screen:
+ * keep the page (and anything being typed) and let SWR retry by itself.
+ */
+export function RefreshFailedNotice() {
+  return (
+    <p
+      role="status"
+      className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+    >
+      Couldn&apos;t refresh just now, so this may be out of date. Retrying
+      automatically.
+    </p>
+  );
+}

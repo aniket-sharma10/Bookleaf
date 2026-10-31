@@ -47,7 +47,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.7 | Draft safety post-check | T5.6 | done |
 | T5.8 | Admin draft UI | T5.6, T5.7, T4.8 | done |
 | T5.9 | Live prompt evaluation script | T5.3, T5.6 | done |
-| T6.1 | Polling for near-real-time updates | T3.7, T4.3, T4.8 | todo |
+| T6.1 | Polling for near-real-time updates | T3.7, T4.3, T4.8 | done |
 | T6.2 | Integration and error-state pass | T6.1, T5.8 | todo |
 | T6.3 | AI failure drill | T6.2 | todo |
 | T7.1 | Full quality gate | T6.3 | todo |
@@ -642,6 +642,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** SWR `refreshInterval` on the author ticket detail and list (5 s), the admin queue (15 s) and the admin detail (10 s). Polling pauses while the tab is hidden. The admin composer is protected so polling never clobbers draft text being edited.
 - **Acceptance:** with two browsers, an admin reply appears in the author view within about 5 s without a reload.
 - **Verify:** manual check. Optionally record it with Chrome DevTools.
+- **Outcome (2026-10-31):**
+  - `src/lib/polling.ts` (`POLL_MS`: author tickets 5 s, admin ticket 10 s, admin queue 15 s) applied as SWR `refreshInterval` to the author list and detail, the admin ticket page and the queue. Hidden tabs don't poll (SWR's default `refreshWhenHidden: false`; not separately tested).
+  - Found while wiring it: a failed background refresh would have replaced the whole page with an error, wiping a reply being typed. All four views now show the full-page error only when nothing has loaded yet; otherwise they keep the data and show `RefreshFailedNotice` while SWR retries.
+  - Browser check (local Docker dev DB, two sessions): an admin reply with a status change appeared on the author's open ticket 1.1 s after sending, with no reload (status → Resolved); a new author ticket appeared in the open admin queue after 6.1 s (6 → 7 tickets); text typed in the admin reply box survived a normal poll, 12 s of forced failing polls (notice shown, page kept) and the recovery (notice gone). Recorded in `docs/test-checklist.md`.
 
 ### T6.2 Integration and error-state pass
 - **Reqs:** API-01, API-03, EV (product thinking)
