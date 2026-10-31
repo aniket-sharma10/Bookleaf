@@ -74,6 +74,7 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
   - Ask the owner, stating the exact command, the target database and that the data will be destroyed.
   - Pass their exact consent text via `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` for that operation only.
   - Never invent or reuse consent.
+  - **Standing approval** (owner, 2026-10-31, during development): resetting the local test database `bookleaf_test` (e.g. via `npm test`) needs no fresh ask. Pass `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="Owner standing approval: reset bookleaf_test whenever needed"`. This covers only `bookleaf_test`, never the dev or any hosted database.
 - Tests use a **fake AI generator** and never call the real Gemini API.
 - Docker Compose project `bookleaf` only. Never stop, remove or prune other projects' containers or volumes.
 - Every new API route needs: a happy path, validation failure, an entry in the authz matrix (`MATRIX` in `tests/integration/authz.test.ts`; the test fails until it's there), and a cross-author test where it touches author data.
@@ -83,7 +84,8 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
 - Implement only the requested task's scope. Do not rewrite or refactor unrelated code. Do not add features, abstractions or dependencies "for later".
 - Never silently skip a requirement or acceptance criterion. If something can't be done, say so, mark the task `blocked` and give the reason.
 - **After completing the requested task, stop and wait for the owner's approval before starting another.** Suggest the next task; don't begin it.
-- **Do not stage, commit or push unless the owner explicitly asks.** Use plain `rm`, not `git rm`, which stages. When asked to commit: one task per commit, with the task ID in the message (e.g. `T3.4: ticket creation API`).
+- **Do not push unless the owner explicitly asks.** Use plain `rm`, not `git rm`, which stages.
+- **Commits** (owner instruction, 2026-10-31): when working through tasks, commit after each finished task, one task per commit. Match the owner's style: a Conventional Commits prefix and a short lowercase summary (e.g. `feat: add author books API with totals`). The owner is the author; never add a `Co-Authored-By` or other AI attribution line.
 - Explain significant trade-offs briefly, in plain language, so the owner can explain and defend them.
 
 ## Documentation (proportional)
