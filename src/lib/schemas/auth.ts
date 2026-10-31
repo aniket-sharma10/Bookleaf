@@ -7,6 +7,7 @@ export const loginSchema = z.object({
     .string()
     .trim()
     .toLowerCase()
+    .min(1, "Enter your email address.")
     .pipe(z.email("Enter a valid email address.")),
   // Upper bound only to reject absurd payloads; bcrypt reads the first 72 bytes.
   password: z.string().min(1, "Enter your password.").max(256),

@@ -7,7 +7,7 @@ Status: **approved** (2026-10-30), with the authentication change recorded in AD
 There is one deployable Next.js (App Router, TypeScript) application. It contains the UI, a REST API implemented as Route Handlers, and a server-only service layer. PostgreSQL is accessed through Prisma. Gemini is called only from the server.
 
 ```
-Browser (React client components, Tailwind)
+Browser (React client components, Tailwind + shadcn/ui)
    │  fetch JSON over /api/** (HttpOnly JWT cookie)          ▲ poll every ~5 s (RT-01)
    ▼                                                    │
 Next.js app ─ proxy.ts: JWT check → redirect for /author, /admin (UX only)
@@ -61,9 +61,9 @@ src/
       author/tickets/route.ts, author/tickets/[id]/route.ts
       admin/tickets/route.ts, admin/tickets/[id]/route.ts
       admin/tickets/[id]/{messages,notes,drafts,classification}/route.ts
-  components/              # presentational UI (badges, tables, forms, states)
-  features/                # client feature components + hooks (author-tickets, admin-queue, …)
-  lib/                     # CLIENT-SAFE: api-client, Zod request schemas, enum labels, formatters
+  components/              # presentational UI: ui/ (shadcn/ui, Radix-based), portal/ (shell, header, nav, logout), empty and heading blocks
+  features/                # client feature components + hooks (auth/login-form, author-tickets, admin-queue, …)
+  lib/                     # CLIENT-SAFE: api-client, routes (portalPath, SessionUser), Zod request schemas, enum labels, formatters, utils (cn)
   server/                  # SERVER-ONLY (each file imports 'server-only')
     env.ts                 # Zod-validated env
     db.ts                  # Prisma client singleton (adapter-pg)
@@ -167,7 +167,7 @@ The approach is **email/password login, with a signed JWT in an HttpOnly cookie*
 - **Claims are trusted until expiry.** The user is not re-loaded from the DB on every request. Seeded users are never deleted and roles never change in this app; this is documented as a limitation.
 - **Layers:**
   1. `proxy.ts` verifies the JWT (with `jose`, no DB access) only to redirect logged-out or wrong-role users away from `/author` and `/admin`. It is **not** relied on for security.
-  2. Portal `layout.tsx` calls `requireUser(role)` and redirects. This is a UX gate.
+  2. Portal `layout.tsx` calls `requirePortalUser(role)` (`requireUser` plus the user's name, cached once per request with React `cache()`) and redirects. This is a UX gate. `/login` sends a signed-in user to their portal, and `/` redirects by role.
   3. `withApi(handler, { access })` in every route handler is the **actual boundary** (`src/server/http/handler.ts`). It verifies the token (`getUserFromRequest`, `src/server/auth/session.ts`), then checks the role. It returns 401 `UNAUTHENTICATED` or 403 `FORBIDDEN`.
   4. Services scope author data by `ctx.user.authorId`, which comes from the verified token and never from client input.
 - **CSRF:** `SameSite=Lax`, plus the `Origin` check on mutations in `withApi` (see §4).

@@ -8,7 +8,7 @@ BookLeaf Publishing's Author Support & Communication Portal: a web app with an a
 - Add infrastructure, abstractions, safeguards or hardening only when a requirement or a concrete risk justifies it.
 - Note minor limitations briefly instead of engineering them away. Don't over-invest in tooling or setup details that don't affect the product.
 
-**Stack (approved):** Next.js App Router and TypeScript · Tailwind · Route Handlers as a REST API · PostgreSQL and Prisma · email/password auth (bcrypt via `bcryptjs`, HS256 JWT via `jose` in an HttpOnly cookie) · Gemini via `@google/genai` · Zod · Vitest · SWR (polling). Do not add other infrastructure or frameworks without asking.
+**Stack (approved):** Next.js App Router and TypeScript · Tailwind with shadcn/ui (Radix primitives, `lucide-react` icons) · Route Handlers as a REST API · PostgreSQL and Prisma · email/password auth (bcrypt via `bcryptjs`, HS256 JWT via `jose` in an HttpOnly cookie) · Gemini via `@google/genai` · Zod · Vitest · SWR (polling). Do not add other infrastructure or frameworks without asking.
 
 This file is the central source of project rules. Skills in `.claude/skills/` describe workflows and refer back here instead of restating rules.
 
@@ -28,6 +28,8 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
 - `src/server/**`: server-only code (each file imports `server-only`). Services hold the business rules. `server/ai` is the only place that talks to the LLM, and `gemini.ts` is the only file that imports the SDK.
 - `src/lib/**`: client-safe code only (schemas, labels, formatters, API client). It must never import from `src/server`.
 - UI components never import Prisma or services. They use `/api/**` via the API client.
+- Server layouts and pages may call the auth guards in `src/server/auth/guards.ts` (redirects and the signed-in user's name). Data shown in the UI comes from `/api/**`.
+- shadcn/ui components live in `src/components/ui/` (added with `npx shadcn@latest add <name>`, then `npm run format`). Edit them only to fix a real problem.
 
 ## Security and data integrity (non-negotiable)
 - Every route except login verifies the JWT (algorithm pinned; issuer, audience and expiry checked; claims validated with Zod) and checks access in the handler via `withApi`. `proxy.ts` and layouts are UX redirects only.

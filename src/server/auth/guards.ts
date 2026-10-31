@@ -1,6 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
+
+import { portalPath, type Role } from "@/lib/routes";
+import { type CurrentUser, getCurrentUser } from "@/server/services/auth";
 
 import { AUTH_COOKIE } from "./cookie";
 import {
@@ -10,10 +14,7 @@ import {
   verifyAuthToken,
 } from "./jwt";
 
-/** Each role's home portal. */
-export function portalPath(role: AuthUser["role"]): "/author" | "/admin" {
-  return role === "AUTHOR" ? "/author" : "/admin";
-}
+export { portalPath };
 
 /** The signed-in user in a server component or layout, or null. */
 export async function getUserFromCookies(): Promise<AuthUser | null> {
@@ -28,9 +29,23 @@ export async function getUserFromCookies(): Promise<AuthUser | null> {
  */
 export async function requireUser(role: "AUTHOR"): Promise<AuthorUser>;
 export async function requireUser(role: "ADMIN"): Promise<AdminUser>;
-export async function requireUser(role: AuthUser["role"]): Promise<AuthUser> {
+export async function requireUser(role: Role): Promise<AuthUser> {
   const user = await getUserFromCookies();
   if (!user) redirect("/login");
   if (user.role !== role) redirect(portalPath(user.role));
   return user;
 }
+
+/**
+ * requireUser plus the user's display name, for portal layouts and pages.
+ * React's cache() runs it once per request, so a layout and its page share
+ * one token check and one database read.
+ */
+export const requirePortalUser = cache(
+  async (role: Role): Promise<CurrentUser> =>
+    getCurrentUser(
+      role === "AUTHOR"
+        ? await requireUser("AUTHOR")
+        : await requireUser("ADMIN"),
+    ),
+);

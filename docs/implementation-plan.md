@@ -21,7 +21,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T2.3 | JWT sign/verify and cookie helpers | T1.3 | done |
 | T2.4 | Auth guards (API and pages) | T2.1, T2.3 | done |
 | T2.5 | Login, logout, me endpoints | T2.2, T2.4 | done |
-| T2.6 | Login page, proxy, portal shells | T2.5 | todo |
+| T2.6 | Login page, proxy, portal shells | T2.5 | done |
 | T2.7 | Authorization test matrix (baseline) | T2.5 | todo |
 | T3.1 | Shared labels, schemas, formatters | T1.5 | todo |
 | T3.2 | Books API | T2.4, T3.1 | todo |
@@ -297,6 +297,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `/login` form (client component calling the API, with error and loading states), redirect by role after login. `src/proxy.ts` verifies the JWT (no DB access) only to redirect logged-out or wrong-role users. `author/layout.tsx` and `admin/layout.tsx` provide guards and nav with logout. `/` redirects by role.
 - **Acceptance:** manual check that the author lands on `/author` and the admin on `/admin`, that cross-portal URLs redirect, and that logout returns to `/login`.
 - **Verify:** manual browser check. Document it in the T7.3 checklist.
+- **Outcome (2026-10-31):**
+  - Added shadcn/ui (owner-approved): `radix-nova` style, Radix primitives, `lucide-react` icons, components `button`, `input`, `label` and `alert`. The `cn` helper comes from shadcn's `cn` package (its CLI default, a drop-in for clsx + tailwind-merge); the `shadcn` package is a dev dependency, used only for its CSS import. BookLeaf theme tokens and fonts (Geist, Source Serif 4) are in `globals.css` and the root layout.
+  - `src/proxy.ts` (redirects only, 4 unit tests), `/login` with `features/auth/login-form.tsx` (client validation with the shared schema, field and form errors, loading state), `/` redirect, and the `author`/`admin` layouts using `requirePortalUser`. The portal shell is shared; the author header is light, the admin "Support desk" header is dark. `lib/api-client.ts` and `lib/routes.ts` added.
+  - Browser check (dev server, dev DB): admin and author land on their portals; cross-portal URLs and `/login` redirect signed-in users; logout returns to `/login`, and Back doesn't reopen the portal; the cookie isn't visible to `document.cookie`; layouts checked at 1360px and 390px. Recorded in `docs/test-checklist.md`.
+  - `tests/baseline.test.ts` now stubs `next/font/google` (Next compiles it, Vitest doesn't). Suite 146/146.
 
 ### T2.7 Authorization test matrix (baseline)
 - **Reqs:** AUTH-04, AUTH-05

@@ -6,9 +6,10 @@
   - password hashing (`src/server/auth/password.ts`, T2.2);
   - token and cookie helpers (`jwt.ts`, `cookie.ts`, T2.3);
   - API and page guards (`session.ts`, `guards.ts`, `withApi` access levels, T2.4);
-  - login, logout and me routes (`src/app/api/auth/`, `src/server/services/auth.ts`, T2.5).
+  - login, logout and me routes (`src/app/api/auth/`, `src/server/services/auth.ts`, T2.5);
+  - login page, `proxy.ts` redirects and portal layouts (T2.6).
 
-  Still to come: pages and the authz test matrix (T2.6–T2.7).
+  Still to come: the authz test matrix (T2.7).
 - **Requirements:** AUTH-01–08, API-05
 
 ## Context
