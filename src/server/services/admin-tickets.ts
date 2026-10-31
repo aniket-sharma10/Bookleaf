@@ -154,7 +154,6 @@ const detailSelect = {
       body: true,
       commitments: true,
       needsVerification: true,
-      warnings: true,
       model: true,
       promptVersion: true,
       createdAt: true,

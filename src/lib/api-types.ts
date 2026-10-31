@@ -157,8 +157,6 @@ export type AiDraft = {
   commitments: string[];
   /** Facts the admin must check before sending. */
   needsVerification: string[];
-  /** Automatic safety-check findings (T5.7). */
-  warnings: string[];
   model: string;
   promptVersion: string;
   createdAt: string;

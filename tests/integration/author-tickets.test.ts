@@ -338,7 +338,6 @@ describe("GET /api/author/tickets and /api/author/tickets/:id", () => {
         body: "SECRET-DRAFT",
         commitments: ["SECRET-COMMITMENT"],
         needsVerification: [],
-        warnings: [],
         model: "SECRET-MODEL",
         promptVersion: "v1",
         createdById: adminId,

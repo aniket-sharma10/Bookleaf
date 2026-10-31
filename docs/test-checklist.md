@@ -71,7 +71,7 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 
 - [x] With AI disabled: a new ticket stays "Needs triage"; the ticket page shows "AI draft unavailable — write a reply manually"; "Retry AI classification" explains that AI isn't configured; a manual reply still sends.
 - [x] With AI enabled: a new ticket is classified within seconds; opening a ticket without a draft shows "Drafting…" and then fills the editor with a draft greeting the author by first name.
-- [x] The draft panel lists what the reply promises, what to check before sending, and any warnings.
+- [x] The draft panel lists what the reply promises and what to check before sending.
 - [x] "Regenerate" asks before replacing edited text; dismissing keeps the edits.
 - [x] A reply sent from a draft records the draft; the draft is then marked as written before the latest message.
 - [x] "Retry AI classification" fills category and priority for an untriaged ticket and disappears.

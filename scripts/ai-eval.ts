@@ -22,7 +22,6 @@ import {
 } from "@/server/ai/draft";
 import { assembleDraftContext } from "@/server/ai/draft-context";
 import { AiError, type TokenUsage } from "@/server/ai/provider";
-import { checkDraft } from "@/server/ai/safety";
 import { getEnv } from "@/server/env";
 import { formatDate } from "@/lib/format";
 import { payoutDeadlineFor } from "@/server/policies/royalty";
@@ -354,12 +353,6 @@ async function main(): Promise<void> {
         );
         row.tokens += total(drafted.usage);
         const reply = personalise(drafted.data.reply, context.authorFirstName);
-        const warnings = checkDraft(reply, context);
-        row.checks.push({
-          name: "no safety warnings",
-          ok: warnings.length === 0,
-          detail: warnings.join(" | ") || undefined,
-        });
         for (const check of testCase.draftChecks) {
           row.checks.push({
             name: check.name,

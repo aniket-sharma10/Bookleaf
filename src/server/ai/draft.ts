@@ -16,7 +16,6 @@ import {
   type GenerateRequest,
   type StructuredGenerator,
 } from "./provider";
-import { checkDraft } from "./safety";
 
 // AI-drafted replies (DRAFT-01, DRAFT-04–09). The model writes; an admin
 // reviews, edits and sends. Nothing here ever reaches an author by itself.
@@ -83,7 +82,6 @@ type DraftRow = {
   body: string;
   commitments: unknown;
   needsVerification: unknown;
-  warnings: unknown;
   model: string;
   promptVersion: string;
   createdAt: Date;
@@ -96,7 +94,6 @@ export function toAiDraft(row: DraftRow, stale: boolean): AiDraft {
     body: row.body,
     commitments: stringList.parse(row.commitments),
     needsVerification: stringList.parse(row.needsVerification),
-    warnings: stringList.parse(row.warnings),
     model: row.model,
     promptVersion: row.promptVersion,
     createdAt: row.createdAt.toISOString(),
@@ -148,7 +145,6 @@ export async function generateDraft(
       body,
       commitments: output.commitments,
       needsVerification: output.needsVerification,
-      warnings: checkDraft(body, context),
       model: generator.modelFor("DRAFT"),
       promptVersion: DRAFT_PROMPT_VERSION,
       createdById: adminId,

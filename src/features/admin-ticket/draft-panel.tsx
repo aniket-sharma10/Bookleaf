@@ -1,49 +1,20 @@
-import {
-  CircleAlert,
-  ClipboardCheck,
-  Handshake,
-  LoaderCircle,
-  RotateCw,
-  Sparkles,
-  TriangleAlert,
-} from "lucide-react";
+import { CircleAlert, LoaderCircle, RotateCw, Sparkles } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { AiDraft } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
 
-// What the admin needs to review an AI draft (DRAFT-02, DRAFT-05). The
-// lists are information, not a gate: the admin decides what to send.
+// What the admin needs to review an AI draft (DRAFT-02, DRAFT-05): the
+// promises it makes and the facts to check, as the model listed them. They
+// are information, not a gate: the admin decides what to send.
 
-function Checklist({
-  icon,
-  title,
-  hint,
-  items,
-  tone = "neutral",
-}: {
-  icon: React.ReactNode;
-  title: string;
-  hint: string;
-  items: string[];
-  tone?: "neutral" | "warning";
-}) {
+function ReviewList({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
-    <div
-      className={
-        tone === "warning"
-          ? "rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-950"
-          : "rounded-lg border bg-card p-3"
-      }
-    >
-      <p className="flex items-center gap-1.5 text-sm font-medium">
-        {icon}
-        {title}
-      </p>
-      <p className="mt-0.5 text-xs opacity-80">{hint}</p>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+    <div>
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm">
         {items.map((item, index) => (
           <li key={`${index}-${item}`}>{item}</li>
         ))}
@@ -100,18 +71,19 @@ export function DraftPanel({
 
   if (!draft) return null;
 
-  const nothingFlagged =
-    draft.commitments.length === 0 &&
-    draft.needsVerification.length === 0 &&
-    draft.warnings.length === 0;
-
   return (
-    <div className="space-y-3 rounded-xl border border-primary/20 bg-accent/40 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-sm font-medium">
-          <Sparkles aria-hidden className="size-4 text-primary" />
-          AI draft in the editor below — review and edit before sending
-        </p>
+    <div className="space-y-3 rounded-lg border border-primary/20 bg-accent/40 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+            <Sparkles aria-hidden className="size-4 text-primary" />
+            AI draft
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Drafted {formatDateTime(draft.createdAt)}. It&apos;s in the editor
+            below: review and edit it before sending.
+          </p>
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -122,35 +94,11 @@ export function DraftPanel({
           Regenerate
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Drafted {formatDateTime(draft.createdAt)}
-        {draft.stale ? " · written before the latest message" : ""}
-      </p>
-
-      <Checklist
-        icon={<TriangleAlert aria-hidden className="size-4" />}
-        title="Warnings"
-        hint="Automatic checks found something the facts don't support."
-        items={draft.warnings}
-        tone="warning"
-      />
-      <Checklist
-        icon={<Handshake aria-hidden className="size-4" />}
-        title="This reply promises"
-        hint="Only send if BookLeaf will really do these."
-        items={draft.commitments}
-      />
-      <Checklist
-        icon={<ClipboardCheck aria-hidden className="size-4" />}
+      <ReviewList title="Promises in this reply" items={draft.commitments} />
+      <ReviewList
         title="Check before sending"
-        hint="The AI couldn't verify these from the data."
         items={draft.needsVerification}
       />
-      {nothingFlagged ? (
-        <p className="text-sm text-muted-foreground">
-          No promises, checks or warnings flagged for this draft.
-        </p>
-      ) : null}
     </div>
   );
 }

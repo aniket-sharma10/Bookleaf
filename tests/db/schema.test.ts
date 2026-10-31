@@ -149,7 +149,6 @@ describe("migrated schema", () => {
         body: "draft",
         commitments: [],
         needsVerification: [],
-        warnings: [],
         model: "test-model",
         promptVersion: "v0",
         createdById: staff.id,

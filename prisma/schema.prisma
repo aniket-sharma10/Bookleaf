@@ -211,7 +211,6 @@ model AiDraft {
   body              String
   commitments       Json // string[]: actions the reply says BookLeaf will take
   needsVerification Json // string[]: facts the admin must check before sending
-  warnings          Json // string[]: deterministic safety-check findings
   model             String
   promptVersion     String
   createdById       String

@@ -53,11 +53,13 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T7.1 | Full quality gate | T6.3 | done |
 | T7.2 | Security review | T7.1 | done |
 | T7.3 | Manual end-to-end checklist | T7.1 | todo |
-| T7.4 | Production deployment and seed | T7.2, T7.3, T7.8 | todo |
+| T7.4 | Production deployment and seed | T7.2, T7.3, T7.8, T7.10 | todo |
 | T7.5 | README and API documentation | T7.4 | todo |
 | T7.6 | One-page write-up | T7.5 | todo |
 | T7.7 | Handover | T7.6 | todo |
 | T7.8 | Basic rate limiting | T7.2 | done |
+| T7.9 | Remove the pattern-based draft post-check; simplify the draft panel | T7.8 | done |
+| T7.10 | Draft automatically only before the first reply | T7.9 | todo |
 
 Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T1.3. T3.1, T5.1 and T5.2 do not depend on the UI, and can be pulled forward if a session has spare time.
 
@@ -603,6 +605,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - `server/ai/safety.ts` `checkDraft(reply, context)`, run on every new draft and stored in `AiDraft.warnings` (shown in admin detail). Compares against all four context blocks; flags amounts, numbers, links, emails and phone numbers not in them, "already happened" phrasing (each phrase once, longest match), saying a payment is overdue or late, and leftover privacy placeholders.
   - Proportionality check: run over the 4 real drafts from T5.6 (which quote ₹850, ₹1,000, 14 Nov 2026, 45 days, 48 hours, 5 to 7 business days and an ISBN): no warnings.
   - Tests: 9 new (8 unit incl. future commitments and "has been selling" not flagged; end-to-end storage and display); suite 353/353.
+  - **Superseded:** removed in T7.9 (ADR-0010).
 
 ### T5.8 Admin draft UI
 - **Reqs:** DRAFT-01, DRAFT-02, DRAFT-05, DRAFT-08
@@ -707,7 +710,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 
 ### T7.4 Production deployment and seed
 - **Reqs:** DEL-03, DEL-04
-- **Prereqs:** T7.2, T7.3, T7.8
+- **Prereqs:** T7.2, T7.3, T7.8, T7.10
 - **Scope:** set production env vars, `migrate deploy`, seed from local, run `db:verify` against production, then re-run the T7.3 checklist on the live URL. Note the AI quota.
   - Moved here from the original T1.8:
     - Use a separate Neon project for production, never the dev one.
@@ -743,6 +746,18 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - Revocation reassessed and kept as is (ADR-0002): HttpOnly already blocks token theft by script, and the obvious fix (a per-user `tokenVersion`) would sign out every reviewer sharing a demo account on any one logout.
   - Applied to the Neon dev DB (`migrate deploy`). Checked live on `next start` with a test IP: 10 × 401, then 429 with `Retry-After` and the message, which the login form shows as "Too many attempts"; another IP is unaffected. Production gets the migration in T7.4.
 
+### T7.9 Remove the pattern-based draft post-check; simplify the draft panel
+- **Reqs:** DRAFT-02, DRAFT-05
+- **Prereqs:** T7.8
+- **Scope:** found in the owner's manual testing. The T5.7 check flagged a correct future commitment ("once the update has been processed"), and the owner judged hand-written phrase checks not production practice: remove it, or keep it only with an established practice (ADR-0010). Keep the promises and checks lists, but make the panel plainer.
+- **Verify:** standard checks; the migration leaves no drift; browser check of the panel.
+- **Outcome:**
+  - Removed `src/server/ai/safety.ts` and its tests, the `warnings` field (`AiDraft` type, admin select, draft service) and the eval's "no safety warnings" check. Migration `20261031180000_drop_ai_draft_warnings` drops the column; `migrate diff` against the migrated test DB shows no drift. ADR-0010 records the decision and supersedes the post-check in ADR-0003.
+  - `draft-panel.tsx`: one card ("AI draft", drafted time, Regenerate) with two plain lists, "Promises in this reply" and "Check before sending", instead of three nested cards with hints. The "written before the latest message" note is gone: the composer never shows a stale draft, so it could not appear.
+  - Browser check (`next start` on the local Docker dev DB, seeded): a new royalty ticket drafted in about 7 s, and the panel showed one promise and two checks above the editor.
+  - Suite 361/361 (the 10 removed tests were the post-check's); lint, typecheck, format and build pass.
+  - Follow-ups: the owner applies the migration to the Neon dev DB (`npx prisma migrate deploy`), since the classifier blocked it here. `docs/ai-eval.md` still shows the old run's "no safety warnings" rows until `npm run ai:eval` is run again.
+
 ---
 
 ## Deferred / optional backlog
@@ -761,7 +776,7 @@ These are not required and should only be picked up if mandatory work is complet
 
 **Smallest viable end-to-end milestone.** Author login → create ticket → admin sees it in the queue → admin sends a manual reply → the author sees it after a refresh. The path is: Phase 1, Phase 2, T3.1, T3.4, T3.5, T3.7, T4.1, T4.2, T4.6 and a minimal T4.8. This proves auth, ownership, the data model and the API conventions before any AI work. Every later task adds to a working system.
 
-**Deferrable without violating mandatory requirements.** Everything in the deferred backlog, plus the recommended items: BOOK-06/07 polish, QUEUE-05 pagination, RT-02 admin polling, the T5.7 safety post-check (the prompt guardrails and human review remain), T5.9 (but the README must still evidence the AI design), and early deployment (now part of T7.4). Do **not** defer AI classification, drafting, graceful degradation, polling on the author view, or API docs. These are mandatory and are the product's core.
+**Deferrable without violating mandatory requirements.** Everything in the deferred backlog, plus the recommended items: BOOK-06/07 polish, QUEUE-05 pagination, RT-02 admin polling, the T5.7 safety post-check (since removed, ADR-0010; the prompt guardrails and human review remain), T5.9 (but the README must still evidence the AI design), and early deployment (now part of T7.4). Do **not** defer AI classification, drafting, graceful degradation, polling on the author view, or API docs. These are mandatory and are the product's core.
 
 **Highest-risk requirements and early validation.**
 

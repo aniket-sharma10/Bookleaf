@@ -110,7 +110,6 @@ describe("POST /api/admin/tickets/:id/drafts", () => {
       body: `Dear Example,\n\n${DRAFT.reply}\n\nWarm regards,\nBookLeaf Author Support`,
       commitments: DRAFT.commitments,
       needsVerification: DRAFT.needsVerification,
-      warnings: [],
       model: "fake-draft-model",
       promptVersion: DRAFT_PROMPT_VERSION,
       createdAt: expect.any(String),
@@ -174,28 +173,6 @@ describe("POST /api/admin/tickets/:id/drafts", () => {
       id: draft.id,
       stale: true,
     });
-  });
-
-  it("stores safety warnings with the draft and shows them in admin detail (DRAFT-05)", async () => {
-    ai.generator = fakeGenerator({
-      data: {
-        ...DRAFT,
-        reply: "Good news: ₹5,000 has been credited to your account.",
-      },
-    });
-    const ticket = await royaltyTicket();
-    const { data } = (await (await draftFor(ticket.id)).json()) as {
-      data: AiDraft;
-    };
-    expect(data.warnings).toEqual([
-      expect.stringMatching(/amount "₹5,000"/),
-      expect.stringMatching(
-        /"has been credited" says an action already happened/,
-      ),
-    ]);
-    expect((await detail(ticket.id)).latestDraft?.warnings).toEqual(
-      data.warnings,
-    );
   });
 
   it("answers 503 AI_UNAVAILABLE and stores nothing when the AI fails (DRAFT-08)", async () => {

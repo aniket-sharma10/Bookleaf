@@ -651,7 +651,6 @@ describe("POST /api/admin/tickets/:id/messages", () => {
           body: "Draft body",
           commitments: [],
           needsVerification: [],
-          warnings: [],
           model: "test-model",
           promptVersion: "test",
           createdById: me.id,
