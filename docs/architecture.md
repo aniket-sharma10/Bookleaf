@@ -90,7 +90,7 @@ tests/
 docs/                      # requirements, architecture, plan, ADRs, api.md, write-up.md
 ```
 
-Rules: `lib/` must never import from `server/`. Route handlers stay thin (parse → service → respond). Services contain the rules and are what the tests target. `server/ai` is the only code that knows about the LLM provider.
+Rules: `lib/` must never import from `server/`. It may import `@/generated/prisma/enums` (plain constants, safe in the browser), so enum values have one source, the Prisma schema; never the Prisma client. Route handlers stay thin (parse → service → respond). Services contain the rules and are what the tests target. `server/ai` is the only code that knows about the LLM provider.
 
 ## 3. Data model
 
@@ -126,6 +126,8 @@ Design rules (rationale in **ADR-0005**):
 - In route handlers, `params` is a Promise in Next 15+ and must be awaited.
 - **CSRF (API-05):** `withApi` refuses POST/PUT/PATCH/DELETE whose `Origin` header names a different origin (403). Requests without an `Origin` header, such as curl or server-to-server calls, are allowed; browsers always send one on cross-site mutations, and the `SameSite=Lax` cookie is the primary defence.
 - **Request bodies:** `parseJson` requires `Content-Type: application/json`, so plain cross-site HTML forms can't submit.
+- **Request schemas** (`src/lib/schemas/`, shared with the forms): bodies are strict, so unknown keys such as `authorId` or `assigneeId` get 400. Limits (`LIMITS` in `tickets.ts`): subject 3–150 characters, description 10–5,000, replies and notes 1–5,000 (all trimmed); queue `pageSize` 1–100 (default 20), dates `YYYY-MM-DD` with `from` ≤ `to`.
+- **Display formatting** (`src/lib/format.ts`): money as whole rupees with Indian grouping (₹12,34,567); dataset calendar dates in UTC ("5 Mar 2024", so no zone can shift the day); timestamps in IST ("31 Oct 2026, 3:00 pm IST", one zone so server and browser renders match). Missing values show "—" or a given fallback.
 - **Error mapping:** `errorResponse` maps Zod errors to 400 with `details: [{ path, message }]`, Prisma P2025 to 404 and P2002 to 409, and anything else to a logged generic 500 (`src/server/http/`).
 
 | Method | Path | Role | Purpose | Notes |

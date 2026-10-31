@@ -76,7 +76,7 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
   - Never invent or reuse consent.
 - Tests use a **fake AI generator** and never call the real Gemini API.
 - Docker Compose project `bookleaf` only. Never stop, remove or prune other projects' containers or volumes.
-- Every new API route needs: a happy path, validation failure, an entry in the 401/403 authz matrix, and a cross-author test where it touches author data.
+- Every new API route needs: a happy path, validation failure, an entry in the authz matrix (`MATRIX` in `tests/integration/authz.test.ts`; the test fails until it's there), and a cross-author test where it touches author data.
 - UI tasks are verified manually in the browser. State what was checked.
 
 ## Task boundaries

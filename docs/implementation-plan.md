@@ -22,8 +22,8 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T2.4 | Auth guards (API and pages) | T2.1, T2.3 | done |
 | T2.5 | Login, logout, me endpoints | T2.2, T2.4 | done |
 | T2.6 | Login page, proxy, portal shells | T2.5 | done |
-| T2.7 | Authorization test matrix (baseline) | T2.5 | todo |
-| T3.1 | Shared labels, schemas, formatters | T1.5 | todo |
+| T2.7 | Authorization test matrix (baseline) | T2.5 | done |
+| T3.1 | Shared labels, schemas, formatters | T1.5 | done |
 | T3.2 | Books API | T2.4, T3.1 | todo |
 | T3.3 | Author dashboard and My Books UI | T2.6, T3.2 | todo |
 | T3.4 | Ticket creation API | T2.4, T3.1 | todo |
@@ -309,6 +309,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `tests/integration/authz.test.ts` is a table-driven matrix of every route × {no cookie, author, admin} → expected status. New routes must be added to it, and later tasks extend it.
 - **Acceptance:** the matrix passes for the existing routes. The test fails if a route file exists but is missing from the matrix (it globs `src/app/api/**/route.ts`).
 - **Verify:** `npm test`.
+- **Outcome (2026-10-31):**
+  - `tests/integration/authz.test.ts`: one `MATRIX` entry per route and method, run as no session, author and admin against real synthetic users in `bookleaf_test`. The completeness check compares the matrix with every HTTP method exported by every route file, so a new method on an existing route is caught too.
+  - Also covers AUTH-04 for every route: tampered, expired and wrongly signed tokens must behave exactly like no session.
+  - Evidence: a temporary unlisted route made the completeness test fail (then removed). Suite 159/159; phase-gate `npm run build` passes.
+  - **Phase 2 gate met:** seeded logins in and out (T2.5), every existing route rejects unauthenticated and wrong-role calls (this matrix), page redirects (T2.6), bcrypt hashes (T2.2), token only in the HttpOnly cookie (T2.5, T2.6).
 
 ---
 
@@ -323,6 +328,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `src/lib/labels.ts` (enum to label maps from requirements §11), `src/lib/schemas/*.ts` (Zod request schemas shared by the form and the API: ticket create, admin patch, message, note, queue query), `src/lib/format.ts` (INR with en-IN grouping, date formatting, null-safe "—").
 - **Acceptance:** unit tests cover the formatters (₹57,744; null → "—") and the schema limits.
 - **Verify:** `npm test`.
+- **Outcome (2026-10-31):**
+  - `src/lib/labels.ts`, `src/lib/format.ts` (`formatInr`, `formatCount`, `formatDate`, `formatDateTime`, each with an optional fallback such as "No payout yet"), `src/lib/schemas/tickets.ts` (create ticket, admin update, message, note, queue query; `LIMITS`).
+  - Enum values come from Prisma's generated `enums.ts` (client-safe), not a copy. Labels are `Record<Enum, string>`, so a new enum value fails the build until labelled.
+  - Decisions: strict bodies (unknown keys → 400); length limits chosen here because the requirements give none (architecture §4); timestamps in IST, calendar dates in UTC.
+  - Tests: 21 new unit tests (`format`, `labels`, `schemas/tickets`); suite 180/180.
 
 ### T3.2 Books API
 - **Reqs:** BOOK-01–05, AUTH-06
