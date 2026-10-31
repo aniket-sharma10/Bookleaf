@@ -59,3 +59,10 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] "Assign to me" sets the assignee to "You" and disappears.
 - [x] A failed save shows the error under that control and the select returns to the saved value.
 - [x] AI hints read "No AI suggestion yet" while classification is pending.
+
+## Replies and internal notes (MGMT-02, MGMT-04, MGMT-05, DRAFT-03)
+
+- [x] Sending an empty reply or note shows "Write something first." and sends nothing.
+- [x] A reply appears in the conversation; an Open ticket moves to In Progress unless another status was chosen.
+- [x] Notes appear in the amber "Only visible to BookLeaf team" panel.
+- [x] With a second browser signed in as the author: after a refresh the reply and new status show; the note does not.

@@ -21,7 +21,9 @@ import { formatDateTime } from "@/lib/format";
 import { CATEGORY_LABELS, GENERAL_BOOK_LABEL } from "@/lib/labels";
 
 import { AuthorCard, BookCard } from "./context-panel";
+import { InternalNotes } from "./internal-notes";
 import { ManagementPanel } from "./management-panel";
+import { ReplyComposer } from "./reply-composer";
 
 function BackLink() {
   return (
@@ -174,6 +176,9 @@ export function AdminTicketView({
               </ol>
             )}
           </section>
+
+          <ReplyComposer ticket={data} onSent={() => mutate()} />
+          <InternalNotes ticket={data} onAdded={() => mutate()} />
         </div>
 
         <aside className="space-y-4" aria-label="Ticket details">

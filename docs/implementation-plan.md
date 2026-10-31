@@ -37,7 +37,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.5 | Internal notes API | T4.2 | done |
 | T4.6 | Admin response API | T4.2 | done |
 | T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | done |
-| T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | todo |
+| T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | done |
 | T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | todo |
 | T5.2 | Knowledge-base module | T3.1 | todo |
 | T5.3 | Classification service | T5.1, T5.2 | todo |
@@ -489,6 +489,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** an internal notes panel with clearly different styling ("Only visible to BookLeaf team"). A reply composer with an optional status-after-send select. This is manual-only in this task.
 - **Acceptance:** a manual reply sent here appears in the author view after a refresh.
 - **Verify:** manual check with two browsers.
+- **Outcome (2026-10-31):**
+  - `features/admin-ticket/reply-composer.tsx` (status after sending: "Automatic (Open → In Progress)" / "Keep as …" or a chosen status), `internal-notes.tsx` (amber panel, "Only visible to BookLeaf team") and the shared `text-form.tsx` (character count; text kept on error, cleared on success).
+  - Browser check, two contexts (local Docker dev DB): an empty send is refused inline; Support Lead adds a note and sends a reply; the ticket moves Open → In Progress; after a refresh AUTH002 sees the reply and status, and no note.
+  - **Phase 4 gate met** (AI not involved anywhere yet): all tickets visible, filtered and sorted (T4.1, T4.3); open one (T4.2, T4.7); change status, category and priority, assign to self (T4.4, T4.7); notes (T4.5, T4.8); manual replies the author sees (T4.6, T4.8). Suite 265/265; build passes.
 
 ---
 
