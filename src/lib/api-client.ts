@@ -56,3 +56,8 @@ export async function apiRequest<T>(
     error?.details,
   );
 }
+
+/** SWR fetcher: `useSWR<T>("/api/...", fetcher)`. Errors are ApiClientError. */
+export function fetcher<T>(path: string): Promise<T> {
+  return apiRequest<T>(path);
+}

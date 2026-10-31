@@ -16,3 +16,12 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] `document.cookie` in the console doesn't show the session cookie (HttpOnly).
 - [x] "Sign out" returns to `/login`; `/author`, `/admin` and `/api/auth/me` then need a new sign-in, and Back doesn't reopen the portal.
 - [x] At phone width the login brand panel is hidden, and the portal nav moves to its own row under the header.
+
+## My tickets (TICKET-06, TICKET-07, AUTH-06)
+
+- [x] `/author/tickets` lists the author's tickets, most recent activity first, with subject, book (or "General / Account Level"), status badge and last update (IST).
+- [x] An author with no tickets sees "No queries yet" with a "Raise a query" button.
+- [x] A ticket shows the original query and the replies, oldest first, from "BookLeaf Support" with the sender's name and time; line breaks are kept.
+- [x] A ticket without replies says "No replies yet…".
+- [x] An unknown ticket ID, or another author's ticket ID, shows "We couldn't find that ticket".
+- [x] Lists and tickets read well at phone width.

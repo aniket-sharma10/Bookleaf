@@ -29,7 +29,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T3.4 | Ticket creation API | T2.4, T3.1 | done |
 | T3.5 | Author ticket read APIs | T3.4 | done |
 | T3.6 | New-ticket form UI | T2.6, T3.2, T3.4 | todo |
-| T3.7 | My Tickets list and detail UI | T3.5, T2.6 | todo |
+| T3.7 | My Tickets list and detail UI | T3.5, T2.6 | done |
 | T4.1 | Admin queue API with filters and sort | T3.4 | todo |
 | T4.2 | Admin ticket detail API | T4.1 | todo |
 | T4.3 | Admin queue UI | T4.1, T2.6 | todo |
@@ -390,6 +390,9 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `/author/tickets` (status badges, book name, last update, empty state with a call to action) and `/author/tickets/[id]` (original query and response thread, status, not-found state).
 - **Acceptance:** manual check. An empty state appears for an author with no tickets.
 - **Verify:** manual check. Polling is added in T6.1.
+- **Outcome (2026-10-31):**
+  - `features/author-tickets/ticket-list.tsx` and `ticket-detail.tsx` (SWR via `fetcher` in `lib/api-client.ts`), pages `/author/tickets` and `/author/tickets/[id]`, "My tickets" in the author nav. Shared `components/ticket-status-badge.tsx` (one colour per status) and `components/error-state.tsx` (retry; "session has ended" on 401). Added `swr` and the shadcn `badge`, `card`, `skeleton`, `table`, `textarea` and `native-select` components for Phase 3.
+  - Browser check against the local Docker dev DB (seeded there, so test tickets and a test reply stay out of Neon): list order and badges, detail with a support reply, no-replies state, not-found (unknown ID, and another author's ticket), empty state with call to action, 1360px and 390px. Recorded in `docs/test-checklist.md`.
 
 **First end-to-end milestone after Phase 4's T4.1, T4.2, T4.6 and T4.8 (see Delivery strategy).**
 

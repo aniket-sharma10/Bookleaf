@@ -4,6 +4,7 @@ import { requirePortalUser } from "@/server/auth/guards";
 
 const AUTHOR_NAV: NavItem[] = [
   { href: "/author", label: "Dashboard", exact: true },
+  { href: "/author/tickets", label: "My tickets" },
 ];
 
 // Redirects logged-out and admin visitors (UX only; the APIs enforce access).
