@@ -44,7 +44,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | done |
 | T5.5 | Royalty policy facts and draft context builder | T5.2, T3.2 | done |
 | T5.6 | Draft service and endpoint | T5.1, T5.5, T4.2 | done |
-| T5.7 | Draft safety post-check | T5.6 | todo |
+| T5.7 | Draft safety post-check | T5.6 | done |
 | T5.8 | Admin draft UI | T5.6, T5.7, T4.8 | todo |
 | T5.9 | Live prompt evaluation script | T5.3, T5.6 | todo |
 | T6.1 | Polling for near-real-time updates | T3.7, T4.3, T4.8 | todo |
@@ -598,6 +598,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `server/ai/safety.ts` `checkDraft(reply, context)` → `warnings[]`, stored on `AiDraft`, shown above the editor, never blocking. Proportionate: everything is checked against the **supplied context** (KB sections, verified facts, ticket text), so legitimate figures such as "48 hours", "₹1,000" or the book's own amounts pass. It flags: ₹ amounts, other numbers and durations not in the context; links, email addresses and phone numbers not in the context; and completed-action phrasing ("has been refunded", "we have reprinted", "has been escalated").
 - **Acceptance:** unit tests: "₹5,000 has been credited" without that fact → 2 warnings; a draft quoting the context's figures and timelines → none; an unknown URL or email → a warning; the KB's own figures → none.
 - **Verify:** `npm test`.
+- **Outcome (2026-10-31):**
+  - `server/ai/safety.ts` `checkDraft(reply, context)`, run on every new draft and stored in `AiDraft.warnings` (shown in admin detail). Compares against all four context blocks; flags amounts, numbers, links, emails and phone numbers not in them, "already happened" phrasing (each phrase once, longest match), saying a payment is overdue or late, and leftover privacy placeholders.
+  - Proportionality check: run over the 4 real drafts from T5.6 (which quote ₹850, ₹1,000, 14 Nov 2026, 45 days, 48 hours, 5 to 7 business days and an ISBN): no warnings.
+  - Tests: 9 new (8 unit incl. future commitments and "has been selling" not flagged; end-to-end storage and display); suite 353/353.
 
 ### T5.8 Admin draft UI
 - **Reqs:** DRAFT-01, DRAFT-02, DRAFT-05, DRAFT-08

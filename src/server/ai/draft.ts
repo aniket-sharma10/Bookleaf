@@ -8,6 +8,7 @@ import { NotFoundError } from "@/server/http/errors";
 import { aiUnavailable, generateLogged, getGenerator } from "./client";
 import { buildDraftContext, renderDraftUserTurn } from "./draft-context";
 import { AiError, type StructuredGenerator } from "./provider";
+import { checkDraft } from "./safety";
 
 // AI-drafted replies (DRAFT-01, DRAFT-04–09). The model writes; an admin
 // reviews, edits and sends. Nothing here ever reaches an author by itself.
@@ -123,13 +124,14 @@ export async function generateDraft(
     throw error;
   }
 
+  const body = personalise(output.reply, context.authorFirstName);
   const row = await getDb().aiDraft.create({
     data: {
       ticketId,
-      body: personalise(output.reply, context.authorFirstName),
+      body,
       commitments: output.commitments,
       needsVerification: output.needsVerification,
-      warnings: [],
+      warnings: checkDraft(body, context),
       model: generator.modelFor("DRAFT"),
       promptVersion: DRAFT_PROMPT_VERSION,
       createdById: adminId,
