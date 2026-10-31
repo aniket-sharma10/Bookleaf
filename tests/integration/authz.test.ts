@@ -59,6 +59,16 @@ const MATRIX: MatrixEntry[] = [
     method: "GET",
     expected: { anonymous: 401, author: 200, admin: 403 },
   },
+  {
+    route: "author/tickets",
+    method: "POST",
+    body: {
+      bookId: null,
+      subject: "Matrix ticket",
+      description: "Created by the authorization matrix test.",
+    },
+    expected: { anonymous: 401, author: 201, admin: 403 },
+  },
 ];
 
 const API_DIR = resolve(process.cwd(), "src/app/api");

@@ -26,7 +26,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T3.1 | Shared labels, schemas, formatters | T1.5 | done |
 | T3.2 | Books API | T2.4, T3.1 | done |
 | T3.3 | Author dashboard and My Books UI | T2.6, T3.2 | todo |
-| T3.4 | Ticket creation API | T2.4, T3.1 | todo |
+| T3.4 | Ticket creation API | T2.4, T3.1 | done |
 | T3.5 | Author ticket read APIs | T3.4 | todo |
 | T3.6 | New-ticket form UI | T2.6, T3.2, T3.4 | todo |
 | T3.7 | My Tickets list and detail UI | T3.5, T2.6 | todo |
@@ -360,6 +360,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `server/services/author-tickets.ts` `createTicket(authorId, input)`: verify `bookId` ownership (or null), insert with OPEN and PENDING, and call a no-op `onTicketCreated(id)` hook (wired in T5.4). Route `POST /api/author/tickets`.
 - **Acceptance:** 201 with the ticket DTO. Another author's bookId gets 400 with a field error. An empty subject gets 400.
 - **Verify:** integration tests. Update the authz matrix.
+- **Outcome (2026-10-31):**
+  - `server/services/author-tickets.ts` `createTicket` (+ `authorTicketSelect`, `toAuthorTicket`) and `POST /api/author/tickets` → 201 `AuthorTicket` (`src/lib/api-types.ts`). Another author's or an unknown `bookId` gets the same 400 field error, so book IDs don't leak.
+  - `server/services/ticket-hooks.ts` `onTicketCreated` is the no-op hook for T5.4; `createTicket` catches and logs any hook failure, and a test proves the ticket is still created (TICKET-05).
+  - Tests: 6 integration tests plus the matrix row; suite 201/201; build passes.
 
 ### T3.5 Author ticket read APIs
 - **Reqs:** TICKET-06–08, AUTH-06
