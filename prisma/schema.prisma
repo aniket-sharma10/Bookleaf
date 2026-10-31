@@ -227,15 +227,19 @@ model AiDraft {
 // One row per provider call, for cost and reliability evidence.
 // Never stores prompt text or personal data.
 model AiCallLog {
-  id           String        @id @default(cuid())
-  ticketId     String?
-  kind         AiCallKind
-  model        String
-  outcome      AiCallOutcome
-  inputTokens  Int?
-  outputTokens Int?
-  latencyMs    Int
-  createdAt    DateTime      @default(now())
+  id             String        @id @default(cuid())
+  ticketId       String?
+  kind           AiCallKind
+  model          String
+  // Which prompt produced this call, to compare prompt revisions.
+  promptVersion  String?
+  outcome        AiCallOutcome
+  inputTokens    Int?
+  outputTokens   Int?
+  // Reasoning tokens, billed with output but reported separately.
+  thinkingTokens Int?
+  latencyMs      Int
+  createdAt      DateTime      @default(now())
 
   ticket Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
 }

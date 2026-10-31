@@ -38,7 +38,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.6 | Admin response API | T4.2 | done |
 | T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | done |
 | T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | done |
-| T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | in-progress |
+| T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | done |
 | T5.2 | Knowledge-base module | T3.1 | todo |
 | T5.3 | Classification service | T5.1, T5.2 | todo |
 | T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | todo |
@@ -526,6 +526,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Acceptance:** unit tests with the SDK mocked cover each error mapping above (429, 503 then success, 503 twice, 401, abort, non-JSON, schema mismatch, `MAX_TOKENS`), the disabled generator, and token fields incl. `thoughtsTokenCount` → `thinkingTokens`. A one-off live smoke script validates both configured models with the real configuration (schema + thinking level) on synthetic text.
 - **Verify:** `npm test`; run the smoke script once and record model, outcome, tokens and latency.
 - **Blockers:** `GEMINI_API_KEY` and model variables (set). If the draft model keeps returning 503, report it; no automatic fallback model.
+- **Outcome (2026-10-31):**
+  - `src/server/ai/provider.ts` (interface, `AiError` carrying token usage, disabled generator), `gemini.ts` (the only SDK import; client injectable for tests), `client.ts` (`createGeneratorFromEnv`, `getGenerator`, `generateLogged`: one best-effort `AiCallLog` row per call with separate thinking tokens and prompt version), `tests/helpers/fake-ai.ts`, `scripts/ai-smoke.ts` (`npm run ai:smoke`). Installed `@google/genai` ^2.32.0. Migration `20261031120000_ai_call_log_thinking_and_prompt_version` (two nullable columns), applied to the test, local dev and Neon dev databases; `db:verify` still passes. Tests clear `GEMINI_*`, so they can never call the real API.
+  - Live: the classification model passed every run (1.1–2.7 s). `gemini-3.8-flash` as draft model failed (503 ×4, then 27 s and 65 s; timed out at our 30 s budget) and rejected `MINIMAL`; `gemini-3.5-flash` timed out too. The owner switched `GEMINI_DRAFT_MODEL` to `gemini-3.5-flash-lite`; the final smoke run passed both tasks (1.1 s and 1.6 s). Thinking tokens were not reported at `MINIMAL`/`LOW`, so they log as null.
+  - Tests: 16 new (adapter error mapping and configuration with a fake client; env rules; logging incl. no prompt/personal text and log-failure tolerance); the migration test now checks all migrations on disk. Suite 281/281; build passes.
 
 ### T5.2 Knowledge-base module
 - **Reqs:** DRAFT-04, DRAFT-06, DRAFT-07

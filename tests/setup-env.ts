@@ -9,3 +9,9 @@ process.env.DIRECT_URL = "";
 // Fixed, test-only signing secret, so tests never depend on (or read) the real
 // AUTH_JWT_SECRET in .env.
 process.env.AUTH_JWT_SECRET = "test-only-jwt-secret-not-used-anywhere-else";
+
+// Tests never call the real Gemini API: AI code under test gets a fake
+// generator, and with these unset the real one would be disabled anyway.
+delete process.env.GEMINI_API_KEY;
+delete process.env.GEMINI_CLASSIFY_MODEL;
+delete process.env.GEMINI_DRAFT_MODEL;

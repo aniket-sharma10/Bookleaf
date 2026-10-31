@@ -1,3 +1,6 @@
+import { readdirSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaClient } from "@/generated/prisma/client";
@@ -30,15 +33,21 @@ function admin(id: string) {
 }
 
 describe("migrated schema", () => {
-  it("has the init migration applied and nothing pending", async () => {
+  it("has every migration in prisma/migrations applied and nothing else", async () => {
     const rows = await db.$queryRaw<
       { migration_name: string; done: boolean }[]
     >`
       select migration_name, finished_at is not null as done
       from _prisma_migrations order by migration_name`;
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.migration_name).toMatch(/_init$/);
-    expect(rows[0]?.done).toBe(true);
+    const onDisk = readdirSync(resolve(process.cwd(), "prisma/migrations"), {
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+    expect(rows.map((row) => row.migration_name)).toEqual(onDisk);
+    expect(onDisk[0]).toMatch(/_init$/);
+    expect(rows.every((row) => row.done)).toBe(true);
   });
 
   it("ties User.role to User.authorId with a CHECK constraint", async () => {

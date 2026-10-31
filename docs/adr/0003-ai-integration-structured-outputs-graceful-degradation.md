@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (owner, 2026-10-30). Model IDs set by the owner on 2026-10-31 (see History).
 - **Date:** 2026-10-27
-- **Implementation:** partial. Only the persistence side exists: the `AiDraft` and `AiCallLog` tables, and the AI fields on `Ticket` (T1.5). `GEMINI_*` variables are defined in `src/server/env.ts`. No provider, prompt, KB module or classification code yet (Phase 5).
+- **Implementation:** partial. Persistence (`AiDraft`, `AiCallLog`, AI fields on `Ticket`; T1.5, with `thinkingTokens`/`promptVersion` added in T5.1) and the provider boundary (`src/server/ai/provider.ts`, `gemini.ts`, `client.ts`; T5.1). No prompts, KB module, classification or drafting yet (T5.2–T5.9).
 - **Requirements:** AI-01–09, DRAFT-01–09, TICKET-05, MGMT-04
 
 ## Context

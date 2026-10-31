@@ -19,9 +19,11 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:seed": "prisma db seed",
-    "db:verify": "tsx --conditions=react-server prisma/verify.ts"
+    "db:verify": "tsx --conditions=react-server prisma/verify.ts",
+    "ai:smoke": "tsx --conditions=react-server scripts/ai-smoke.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.32.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "bcryptjs": "^3.0.3",
