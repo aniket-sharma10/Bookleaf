@@ -51,3 +51,11 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] Changing a filter updates the URL; opening a filtered URL restores the filters; "Clear filters" resets them.
 - [x] A filter with no matches shows "No tickets match these filters".
 - [x] At phone width, rows become cards with all the same information.
+
+## Admin ticket page (MGMT-01, MGMT-03, AI-03, AI-04)
+
+- [x] Opening a queue row shows the query, the conversation, a Manage panel, and author and book facts.
+- [x] Changing status, category or priority saves immediately ("Saving…") and survives a reload.
+- [x] "Assign to me" sets the assignee to "You" and disappears.
+- [x] A failed save shows the error under that control and the select returns to the saved value.
+- [x] AI hints read "No AI suggestion yet" while classification is pending.

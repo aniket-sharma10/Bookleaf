@@ -36,7 +36,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.4 | Ticket update API (status, overrides, assign to self) | T4.2 | done |
 | T4.5 | Internal notes API | T4.2 | done |
 | T4.6 | Admin response API | T4.2 | done |
-| T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | todo |
+| T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | done |
 | T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | todo |
 | T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | todo |
 | T5.2 | Knowledge-base module | T3.1 | todo |
@@ -479,6 +479,9 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `/admin/tickets/[id]`. The left side shows the thread and query. The right panel shows author and book facts (the same facts the AI will see), status, category and priority selects (with the "AI suggested X" hint) and an "Assign to me" button.
 - **Acceptance:** each control persists its value, and errors are shown.
 - **Verify:** manual check.
+- **Outcome (2026-10-31):**
+  - `/admin/tickets/[id]` with `features/admin-ticket/ticket-view.tsx` (header badges, query, conversation), `management-panel.tsx` (status/category/priority selects saved on change with "Saving…", "AI suggested X (overridden)" hints and AI reasoning when present, "Assign to me") and `context-panel.tsx` (author and book facts). The PATCH response replaces the cached ticket, so there is no extra request.
+  - Browser check (local Docker dev DB): priority → Critical and "Assign to me" both persist across a reload; a forced 500 shows the error under the control and the select returns to the saved value; not-found state.
 
 ### T4.8 Admin detail UI: notes and reply composer
 - **Reqs:** MGMT-02, MGMT-04
