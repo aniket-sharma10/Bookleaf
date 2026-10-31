@@ -1,4 +1,4 @@
-// Database-target guards (ADR-0006, ADR-0008). Every tool that writes to a
+// Database-target guards (architecture §8). Every tool that writes to a
 // database checks the target here before connecting. A target is identified by
 // protocol, host, port and database name; credentials are never printed.
 // The "dev" target is the local Docker dev database or, when DEV_DATABASE_HOST

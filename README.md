@@ -99,7 +99,7 @@ To use a Neon database instead of Docker, set `DATABASE_URL` to the pooled URL, 
 | `npm run ai:eval` | Runs 10 made-up tickets through the real prompts and writes `docs/ai-eval.md` (about 18 live calls) |
 | `npm run db:down` | Stops the local databases (dev data is kept) |
 
-**Database safety:** the seed, `db:verify` and every Prisma CLI command accept only the development database (local Docker, or the Neon host registered in `DEV_DATABASE_HOST`) and the local test database. Tests run only against the disposable `bookleaf_test` database. See ADR-0006 and ADR-0008.
+**Database safety:** the seed, `db:verify` and every Prisma CLI command accept only the development database (local Docker, or the Neon host registered in `DEV_DATABASE_HOST`) and the local test database. Tests run only against the disposable `bookleaf_test` database.
 
 ## Architecture
 
@@ -146,20 +146,20 @@ The full design is in [docs/architecture.md](docs/architecture.md).
 
 ## Key decisions and why
 
-| Decision | Why | Record |
-|---|---|---|
-| One Next.js app, with the REST API as Route Handlers and a service layer behind them | One deployable, no CORS or cross-domain cookies, and the API still exists as explicit, documented HTTP routes | [ADR-0001](docs/adr/0001-single-nextjs-app-with-rest-route-handlers.md) |
-| Email and password, with a signed JWT in an HttpOnly cookie | Simple and explainable. Page scripts can't read the token, and no session lookup is needed per request. Trade-off: logout can't revoke a copied token before it expires | [ADR-0002](docs/adr/0002-jwt-cookie-auth.md) |
-| One wrapper (`withApi`) enforces access on every endpoint; author data is scoped by the ID in the token | A single, testable security boundary. Another author's ticket simply doesn't exist (404) | [architecture §4–5](docs/architecture.md#5-authentication-and-authorization) |
-| Gemini behind a small provider interface, with schema-validated structured output, and AI that never blocks anything | Malformed AI output becomes a handled error, not a bug. Swapping providers is a one-file change. Tickets and replies work without AI | [ADR-0003](docs/adr/0003-ai-integration-structured-outputs-graceful-degradation.md) |
-| Polling for near-real-time updates | Serverless hosting can't hold WebSocket connections without extra services, and 5–15 s feels responsive for support | [ADR-0004](docs/adr/0004-polling-for-near-real-time-updates.md) |
-| Dataset IDs as primary keys, values stored exactly as supplied | Every row traces back to the JSON, re-seeding is an idempotent upsert, and nothing is "corrected" | [ADR-0005](docs/adr/0005-dataset-preserving-data-model.md) |
-| AI suggestions kept separately from the effective category and priority | The AI fills only empty values, so it never overwrites an admin, and overrides stay visible | [ADR-0005](docs/adr/0005-dataset-preserving-data-model.md) |
-| Separate dev and test databases, with guards in every tool that writes | Tests and scripts can't touch the wrong database by accident | [ADR-0006](docs/adr/0006-isolated-local-databases-and-write-guards.md), [ADR-0008](docs/adr/0008-prisma-cli-target-guard.md) |
-| Environment variables validated where they're used | The app runs without an AI key, and a missing setting names the feature it breaks | [ADR-0007](docs/adr/0007-lazy-environment-validation.md) |
-| Rate limits stored in Postgres | They hold across serverless instances with no Redis or other new service | [ADR-0009](docs/adr/0009-postgres-backed-rate-limiting.md) |
-| The admin's review is the final check on AI drafts; no pattern-matching post-check | Phrase lists can't tell "has been processed" from "once it has been processed", and false alarms teach people to ignore warnings | [ADR-0010](docs/adr/0010-no-pattern-based-draft-post-check.md) |
-| No vector database, embeddings or agent framework | The knowledge base is about 1k tokens in a few sections, so picking sections by category is cheaper, deterministic and testable | [architecture §9](docs/architecture.md#9-rejected-alternatives) |
+| Decision | Why |
+|---|---|
+| One Next.js app, with the REST API as Route Handlers and a service layer behind them | One deployable, no CORS or cross-domain cookies, and the API still exists as explicit, documented HTTP routes |
+| Email and password, with a signed JWT in an HttpOnly cookie | Simple and explainable. Page scripts can't read the token, and no session lookup is needed per request. Trade-off: logout can't revoke a copied token before it expires |
+| One wrapper (`withApi`) enforces access on every endpoint; author data is scoped by the ID in the token | A single, testable security boundary. Another author's ticket simply doesn't exist (404) |
+| Gemini behind a small provider interface, with schema-validated structured output, and AI that never blocks anything | Malformed AI output becomes a handled error, not a bug. Swapping providers is a one-file change. Tickets and replies work without AI |
+| Polling for near-real-time updates | Serverless hosting can't hold WebSocket connections without extra services, and 5–15 s feels responsive for support |
+| Dataset IDs as primary keys, values stored exactly as supplied | Every row traces back to the JSON, re-seeding is an idempotent upsert, and nothing is "corrected" |
+| AI suggestions kept separately from the effective category and priority | The AI fills only empty values, so it never overwrites an admin, and overrides stay visible |
+| Rate limits stored in Postgres | They hold across serverless instances with no Redis or other new service |
+| The admin's review is the final check on AI drafts; no pattern-matching post-check | Phrase lists can't tell "has been processed" from "once it has been processed", and false alarms teach people to ignore warnings |
+| No vector database, embeddings or agent framework | The knowledge base is about 1k tokens in a few sections, so picking sections by category is cheaper, deterministic and testable |
+
+The main decisions are written up in more detail in [docs/adr](docs/adr/README.md).
 
 ## AI integration
 
@@ -310,7 +310,7 @@ UI behaviour is checked by hand with [docs/test-checklist.md](docs/test-checklis
   - People behind one office IP share the sign-in allowance.
   - Counter rows are never cleaned up.
 - **Polling, not push.** Updates arrive within 5–15 seconds. Polling pauses while a tab is hidden or the browser is offline, and catches up on return.
-- **AI drafts depend on human review.** Nothing automatically checks a draft against the facts. The admin, helped by the promises and checks lists, is the safeguard (ADR-0010). The priority rubric is our own assumption, calibrated on our test tickets.
+- **AI drafts depend on human review.** Nothing automatically checks a draft against the facts. The admin, helped by the promises and checks lists, is the safeguard. The priority rubric is our own assumption, calibrated on our test tickets.
 - **The knowledge base lives in code.** A policy change needs a code change and a deploy.
 - **Not in scope:**
   - Authors can't reply within a ticket or close one; they raise a new query.
@@ -324,7 +324,7 @@ UI behaviour is checked by hand with [docs/test-checklist.md](docs/test-checklis
 
 **AI**
 - **A paid Gemini tier** (or another provider's paid API): predictable, higher rate limits; prompts not used for training, so less aggressive minimisation; and room for a stronger model for drafts. `gemini-3.8-flash` was too slow and often unavailable on the free tier.
-- **A durable job queue for AI work:** retries with backoff, so a rate limit or timeout heals itself instead of waiting for an admin.
+- **A durable job queue for AI work:** ticket creation would publish a "classify ticket" message to a queue such as AWS SQS. A serverless consumer (for example, AWS Lambda) runs the classification, retrying with exponential backoff on a rate limit or timeout. Messages that keep failing land in a dead-letter queue for review, so classification heals itself instead of waiting for an admin to retry.
 - **A proper retrieval (RAG) pipeline once the knowledge base grows:**
   - store articles in Postgres with an editor for the support team, so policies change without a deploy;
   - embed them with pgvector;
@@ -349,10 +349,8 @@ UI behaviour is checked by hand with [docs/test-checklist.md](docs/test-checklis
 
 | Document | Contents |
 |---|---|
-| [docs/requirements.md](docs/requirements.md) | Requirements with IDs, dataset facts and how ambiguities were resolved |
 | [docs/architecture.md](docs/architecture.md) | Full design: modules, data model, API, auth, AI, environment |
 | [docs/api.md](docs/api.md) | API reference |
-| [docs/adr/](docs/adr/README.md) | Architecture decision records |
 | [docs/ai-eval.md](docs/ai-eval.md) | Latest prompt evaluation results |
-| [docs/test-checklist.md](docs/test-checklist.md) | Manual browser checks |
-| [docs/implementation-plan.md](docs/implementation-plan.md) | Task plan and outcomes |
+| [docs/adr/](docs/adr/README.md) | Short records of the main decisions |
+| [docs/write-up.md](docs/write-up.md) | One-page note: approach, priorities, trade-offs and the path to production |

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (the stack was specified by the project owner in the planning brief)
 - **Date:** 2026-10-27
-- **Implementation:** partial. The single Next.js 16 app is scaffolded (T1.1) and `src/server/` exists (`env.ts`, `db.ts`). No Route Handlers, services or UI pages yet (Phases 2–4).
+- **Implementation:** implemented. Both portals' pages, 14 endpoints in 12 Route Handlers under `src/app/api/`, and the service layer in `src/server/services/` (Phases 2–6).
 - **Requirements:** API-01, API-04, DEL-03, DEL-10
 
 ## Context
@@ -28,7 +28,7 @@ Build one Next.js (App Router, TypeScript) application:
 - One deployment and one set of env vars. Types and Zod schemas are shared between UI and API.
 - Handler → service → Prisma layering keeps the "backend" separable. It could be extracted into its own service later without rewriting business logic.
 - Pages give up some RSC data-fetching benefits, because data is fetched client-side via the API. This is acceptable for an internal-tool-style UI.
-- Security must not rely on `proxy.ts` (middleware). Every handler enforces auth itself (see ADR-0002).
+- Security must not rely on `proxy.ts` (middleware). Every handler enforces auth itself (see architecture §5).
 
 ## History
 - **2026-10-31:** added the **Implementation** and **Rationale** sections (documentation-format update). The decision is unchanged. The rationale was drawn from the owner's recorded instructions and the existing text.

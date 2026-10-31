@@ -20,7 +20,7 @@ const url = process.env.DIRECT_URL || process.env.DATABASE_URL || undefined;
 
 // Every Prisma CLI command loads this file first, so this is the one place
 // that can stop `migrate reset`, `migrate dev`, `db push` or `db execute` from
-// reaching an unintended database (ADR-0008). Only the dev database (local or
+// reaching an unintended database (architecture §8). Only the dev database (local or
 // the registered Neon host) and the local test database pass, unless the
 // remote opt-in is set for that command.
 assertPrismaCliTarget({

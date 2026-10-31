@@ -41,7 +41,7 @@ Review the code; don't assume. Findings must cite `file:line` and describe a con
 - No `NEXT_PUBLIC_` secret. `src/server/**` files import `server-only`. After `npm run build`, grep `.next/static` for the key and for `GEMINI`.
 - `.gitignore` covers `.env*` (except the two `.example` templates), the PDF and the dataset JSON. `git ls-files` shows none of them.
 
-**Database targets** (ADR-0006, ADR-0008)
+**Database targets** (architecture §8)
 - The `prisma/db-target.ts` guards are intact:
   - the seed and `db:verify` accept the dev DB only (the `DEV_DATABASE_HOST` Neon host, or local Docker dev);
   - `prisma.config.ts` accepts the dev DB or the local test DB only, and refuses `--url`;

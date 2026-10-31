@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { requireEnv } from "@/server/env";
 
-// Session token (ADR-0002): an HS256 JWT carried only in the HttpOnly session
+// Session token (architecture §5): an HS256 JWT carried only in the HttpOnly session
 // cookie. Its payload is readable by whoever holds it, so it carries IDs and
 // the role only, never personal data.
 

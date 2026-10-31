@@ -8,8 +8,8 @@ import { seedDataset } from "../../prisma/dataset";
 import { edgeCaseRawDataset, toDataset } from "../fixtures/synthetic-dataset";
 import { connectTestDb, truncateAllTables } from "../helpers/test-db-client";
 
-// Checks that the migrated schema enforces what architecture §3 and ADR-0005
-// say it does. Synthetic data only.
+// Checks that the migrated schema enforces what architecture §3 says it
+// does. Synthetic data only.
 let db: PrismaClient;
 beforeAll(async () => {
   db = await connectTestDb();

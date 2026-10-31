@@ -243,7 +243,7 @@ model AiCallLog {
   ticket Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
 }
 
-// Fixed-window counters for rate limiting (ADR-0009). The key is the rule plus
+// Fixed-window counters for rate limiting (architecture §5). The key is the rule plus
 // its subject: a client IP for sign-in, a user ID for everything else.
 model RateLimit {
   key         String   @id

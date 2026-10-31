@@ -1,4 +1,4 @@
-// Near-real-time updates by polling (ADR-0004, architecture §7). SWR pauses
+// Near-real-time updates by polling (ADR-0003, architecture §7). SWR pauses
 // polling while the tab is hidden and refreshes when it regains focus.
 
 export const POLL_MS = {

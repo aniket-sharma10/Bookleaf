@@ -1,7 +1,7 @@
 import "server-only";
 import type { z } from "zod";
 
-// The provider boundary (ADR-0003). Prompts, schemas and services depend only
+// The provider boundary (ADR-0002). Prompts, schemas and services depend only
 // on this file; `gemini.ts` is the one implementation, and tests use a fake.
 
 /** The two AI jobs; each has its own model and limits. */

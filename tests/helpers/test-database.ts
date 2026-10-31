@@ -1,4 +1,4 @@
-// Test-database guard and reset (ADR-0006, ADR-0008).
+// Test-database guard and reset (architecture §8).
 //
 // The test database URL comes only from .env.test: never from .env and never
 // from variables exported in the shell, so a stray DATABASE_URL cannot redirect

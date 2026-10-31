@@ -55,11 +55,12 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T7.3 | Manual end-to-end checklist | T7.1 | done |
 | T7.4 | Production deployment and seed | T7.2, T7.3, T7.8, T7.10 | todo |
 | T7.5 | README and API documentation | T7.4 | done |
-| T7.6 | One-page write-up | T7.5 | todo |
+| T7.6 | One-page write-up | T7.5 | done |
 | T7.7 | Handover | T7.6 | dropped |
 | T7.8 | Basic rate limiting | T7.2 | done |
 | T7.9 | Remove the pattern-based draft post-check; simplify the draft panel | T7.8 | done |
 | T7.10 | Draft automatically only before the first reply | T7.9 | done |
+| T7.11 | Trim the docs: keep only the major ADRs, mention docs briefly in the README | T7.5 | done |
 
 Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T1.3. T3.1, T5.1 and T5.2 do not depend on the UI, and can be pulled forward if a session has spare time.
 
@@ -181,7 +182,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
     - `tests/helpers/test-database.ts` (`loadTestDatabaseUrl`, `assertTestDatabase`) accepts only `127.0.0.1`/`localhost`:`55433`/`bookleaf_test`, and only with `NODE_ENV=test`.
     - `tests/helpers/test-db-client.ts` re-checks `current_database()` before truncating.
   - **Setup:** Vitest `globalSetup` → `resetTestDatabase()`: the guard, then `prisma migrate reset --force` with the remote opt-in stripped. `setupFiles` points app code at the test DB.
-  - **Migration safety (ADR-0008):** `prisma.config.ts` guards every Prisma CLI command (only the local dev or test DB, `--url` refused, unless `PRISMA_ALLOW_REMOTE_DATABASE=true`). Guards share `prisma/db-target.ts`, which replaces `prisma/seed-target.ts` with the seed rules unchanged.
+  - **Migration safety (architecture §8):** `prisma.config.ts` guards every Prisma CLI command (only the local dev or test DB, `--url` refused, unless `PRISMA_ALLOW_REMOTE_DATABASE=true`). Guards share `prisma/db-target.ts`, which replaces `prisma/seed-target.ts` with the seed rules unchanged.
   - **Verification:** `prisma/verify-dataset.ts` (`verifyDataset(db, dataset)`) reports differences by record ID and field only.
     - `prisma/verify.ts` (`npm run db:verify`) runs it read-only against `bookleaf_dev` with the real JSON.
     - Integration tests run it against `bookleaf_test` with synthetic fixtures.
@@ -605,7 +606,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - `server/ai/safety.ts` `checkDraft(reply, context)`, run on every new draft and stored in `AiDraft.warnings` (shown in admin detail). Compares against all four context blocks; flags amounts, numbers, links, emails and phone numbers not in them, "already happened" phrasing (each phrase once, longest match), saying a payment is overdue or late, and leftover privacy placeholders.
   - Proportionality check: run over the 4 real drafts from T5.6 (which quote ₹850, ₹1,000, 14 Nov 2026, 45 days, 48 hours, 5 to 7 business days and an ISBN): no warnings.
   - Tests: 9 new (8 unit incl. future commitments and "has been selling" not flagged; end-to-end storage and display); suite 353/353.
-  - **Superseded:** removed in T7.9 (ADR-0010).
+  - **Superseded:** removed in T7.9 (architecture §6.4).
 
 ### T5.8 Admin draft UI
 - **Reqs:** DRAFT-01, DRAFT-02, DRAFT-05, DRAFT-08
@@ -699,7 +700,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Outcome:**
   - Reviewed against the full `review-security` checklist: no Critical, High or Medium findings.
   - Fixed (Low, defence in depth): nothing refused framing. Today the `SameSite=Lax` cookie isn't sent inside a cross-site iframe, so a framed portal page shows the login screen; the protection shouldn't rest on the cookie setting alone. `next.config.ts` now sends `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff` and a referrer policy (architecture §5). Regression test `tests/security-headers.test.ts`; the headers were also confirmed on `next start` responses.
-  - Accepted and documented: logout doesn't revoke a token before it expires (ADR-0002); reassessed in T7.8 and kept. No rate limiting at review time; the owner then asked for it (T7.8).
+  - Accepted and documented: logout doesn't revoke a token before it expires (architecture §5); reassessed in T7.8 and kept. No rate limiting at review time; the owner then asked for it (T7.8).
   - Secret scan: `git grep` for key patterns finds only placeholders and local Docker credentials. The real `.env` values (Gemini key, JWT secret, Neon host and password) appear nowhere in the tree or in history. The built `.next/static` bundle has no key, env name, DB URL or server-only code.
 
 ### T7.3 Manual end-to-end checklist
@@ -715,7 +716,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** set production env vars, `migrate deploy`, seed from local, run `db:verify` against production, then re-run the T7.3 checklist on the live URL. Note the AI quota.
   - Moved here from the original T1.8:
     - Use a separate Neon project for production, never the dev one.
-    - The Vercel build needs `PRISMA_ALLOW_REMOTE_DATABASE=true` (ADR-0008).
+    - The Vercel build needs `PRISMA_ALLOW_REMOTE_DATABASE=true` (architecture §8).
     - `db:seed` and `db:verify` accept only the dev database, so seeding and verifying production needs a small, explicit, owner-approved path.
   - Every hosted operation needs the owner's approval.
 - **Verify:** the live checklist passes.
@@ -735,6 +736,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Reqs:** DEL-07
 - **Prereqs:** T7.5
 - **Scope:** `docs/write-up.md` covers priorities, trade-offs and the production evolution (job queue, SSE or pub/sub, rate limiting, attachments via object storage, AI evaluation set and feedback loop, observability). At most about 500 words.
+- **Outcome:** written in the first person as plain paragraphs at the owner's request (about 615 words, one page): priorities, AI grounding, trade-offs and the production path. Linked from the README's documents list. The owner may also paste it into an email.
 
 ### T7.7 Handover
 - **Reqs:** DEL-01, DEL-02
@@ -745,21 +747,21 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 ### T7.8 Basic rate limiting
 - **Reqs:** none directly (security baseline next to AUTH-01 and API-05; protects the AI quota behind AI-08)
 - **Prereqs:** T7.2
-- **Scope:** added at the owner's request after T7.2. Proportionate limits on sign-in, ticket creation and AI calls, with no new infrastructure (ADR-0009). Reassess logout token revocation.
+- **Scope:** added at the owner's request after T7.2. Proportionate limits on sign-in, ticket creation and AI calls, with no new infrastructure (architecture §5). Reassess logout token revocation.
 - **Verify:** limits return 429 with `Retry-After`; parallel requests can't exceed a limit; successful and invalid sign-ins aren't counted.
 - **Outcome:**
   - `RateLimit` table and migration; `consumeRateLimit` / `refundRateLimit` / `clientIp` in `src/server/http/rate-limit.ts`; wired into four routes (architecture §5 has the limits). The login form shows the 429 message.
   - `tests/integration/rate-limit.test.ts` (10 tests), including a parallel-burst test that allows exactly the limit. A mutation check (removing the sign-in refund) made the matching test fail.
-  - Revocation reassessed and kept as is (ADR-0002): HttpOnly already blocks token theft by script, and the obvious fix (a per-user `tokenVersion`) would sign out every reviewer sharing a demo account on any one logout.
+  - Revocation reassessed and kept as is (architecture §5): HttpOnly already blocks token theft by script, and the obvious fix (a per-user `tokenVersion`) would sign out every reviewer sharing a demo account on any one logout.
   - Applied to the Neon dev DB (`migrate deploy`). Checked live on `next start` with a test IP: 10 × 401, then 429 with `Retry-After` and the message, which the login form shows as "Too many attempts"; another IP is unaffected. Production gets the migration in T7.4.
 
 ### T7.9 Remove the pattern-based draft post-check; simplify the draft panel
 - **Reqs:** DRAFT-02, DRAFT-05
 - **Prereqs:** T7.8
-- **Scope:** found in the owner's manual testing. The T5.7 check flagged a correct future commitment ("once the update has been processed"), and the owner judged hand-written phrase checks not production practice: remove it, or keep it only with an established practice (ADR-0010). Keep the promises and checks lists, but make the panel plainer.
+- **Scope:** found in the owner's manual testing. The T5.7 check flagged a correct future commitment ("once the update has been processed"), and the owner judged hand-written phrase checks not production practice: remove it, or keep it only with an established practice (architecture §6.4). Keep the promises and checks lists, but make the panel plainer.
 - **Verify:** standard checks; the migration leaves no drift; browser check of the panel.
 - **Outcome:**
-  - Removed `src/server/ai/safety.ts` and its tests, the `warnings` field (`AiDraft` type, admin select, draft service) and the eval's "no safety warnings" check. Migration `20261031180000_drop_ai_draft_warnings` drops the column; `migrate diff` against the migrated test DB shows no drift. ADR-0010 records the decision and supersedes the post-check in ADR-0003.
+  - Removed `src/server/ai/safety.ts` and its tests, the `warnings` field (`AiDraft` type, admin select, draft service) and the eval's "no safety warnings" check. Migration `20261031180000_drop_ai_draft_warnings` drops the column; `migrate diff` against the migrated test DB shows no drift. The reasons are in architecture §6.4, and ADR-0002 (AI integration) records the removal in its History.
   - `draft-panel.tsx`: one card ("AI draft", drafted time, Regenerate) with two plain lists, "Promises in this reply" and "Check before sending", instead of three nested cards with hints. The "written before the latest message" note is gone: the composer never shows a stale draft, so it could not appear.
   - Browser check (`next start` on the local Docker dev DB, seeded): a new royalty ticket drafted in about 7 s, and the panel showed one promise and two checks above the editor.
   - Suite 361/361 (the 10 removed tests were the post-check's); lint, typecheck, format and build pass.
@@ -776,6 +778,36 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - Browser check (`next start` on the local Docker dev DB; draft calls counted in `AiCallLog`): reopening a ticket with a stored draft showed it with no call. After sending, the panel offered "Draft with AI" and a reopen made no call. "Draft with AI" over typed text asked first: Cancel kept the text with no call; OK drafted a follow-up into the editor. A Resolved ticket with no reply made no call. A new unanswered ticket drafted by itself (one call), with no flash of the button, and a reload made no further call.
   - Suite 366/366; lint, typecheck, format and build pass.
 
+### T7.11 Trim the docs: keep only the major ADRs, mention docs briefly in the README
+- **Reqs:** DEL-05
+- **Prereqs:** T7.5
+- **Scope:** owner request.
+  - Keep separate ADRs only for major product-architecture decisions, renumbered without gaps.
+  - Fold the rest into the architecture doc.
+  - Remove repetition and stale notes from `architecture.md`.
+  - The README mentions the supporting docs only briefly.
+- **Outcome:**
+  - **ADRs kept and renumbered:**
+    - 0001 single Next.js app with a REST API;
+    - 0002 AI integration (was 0003);
+    - 0003 polling (was 0004).
+  - **Seven ADRs removed,** their short rationale folded into the architecture doc:
+    - the dataset-preserving data model (§3);
+    - JWT cookie auth and Postgres rate limiting (§5, §9);
+    - the removed draft post-check (§6.4, §9);
+    - development tooling: isolated databases, lazy env validation, the Prisma CLI guard (§8).
+
+    The code they describe is unchanged.
+  - **References:** every ADR reference was updated (docs, code comments, `.env.example`, `CLAUDE.md`, the security-review skill). The one exception is the comment in migration `20261031180000_drop_ai_draft_warnings`, which still cites the old ADR number, because editing an applied migration would change its checksum.
+  - **`architecture.md` rewritten** (5,410 → about 3,200 words), with the same section numbers, which code comments, `CLAUDE.md` and the README cite. It now keeps only the implementation detail found nowhere else:
+    - Material repeated from the README (system diagram, AI approach, model rationale, security summary) was removed.
+    - So was material repeated from `api.md` (conventions, error codes, the endpoint table) and `.env.example` (the variables table).
+    - Task and process notes were removed.
+    - Stale statements were corrected: the order of checks, the draft flow (now the first-open rule), and the AI's classification update (`COALESCE`, not `updateMany`).
+    - `CLAUDE.md` and two code comments that cited §4 for the error codes now point to `api.md`.
+  - **README:** the decisions table lost its record column and the two tooling rows, and links the ADR folder once. The documents list shows only architecture, API, prompt evaluation and ADRs.
+  - **ADR-0001's Implementation line** said "partial" (from T1.1). Corrected to implemented, here and in the index.
+  - **Not featured in the README:** `requirements.md`, `implementation-plan.md`, `test-checklist.md`. They stay as working documents because `CLAUDE.md` and the project skills depend on them.
 ---
 
 ## Deferred / optional backlog
@@ -794,7 +826,7 @@ These are not required and should only be picked up if mandatory work is complet
 
 **Smallest viable end-to-end milestone.** Author login → create ticket → admin sees it in the queue → admin sends a manual reply → the author sees it after a refresh. The path is: Phase 1, Phase 2, T3.1, T3.4, T3.5, T3.7, T4.1, T4.2, T4.6 and a minimal T4.8. This proves auth, ownership, the data model and the API conventions before any AI work. Every later task adds to a working system.
 
-**Deferrable without violating mandatory requirements.** Everything in the deferred backlog, plus the recommended items: BOOK-06/07 polish, QUEUE-05 pagination, RT-02 admin polling, the T5.7 safety post-check (since removed, ADR-0010; the prompt guardrails and human review remain), T5.9 (but the README must still evidence the AI design), and early deployment (now part of T7.4). Do **not** defer AI classification, drafting, graceful degradation, polling on the author view, or API docs. These are mandatory and are the product's core.
+**Deferrable without violating mandatory requirements.** Everything in the deferred backlog, plus the recommended items: BOOK-06/07 polish, QUEUE-05 pagination, RT-02 admin polling, the T5.7 safety post-check (since removed, architecture §6.4; the prompt guardrails and human review remain), T5.9 (but the README must still evidence the AI design), and early deployment (now part of T7.4). Do **not** defer AI classification, drafting, graceful degradation, polling on the author view, or API docs. These are mandatory and are the product's core.
 
 **Highest-risk requirements and early validation.**
 

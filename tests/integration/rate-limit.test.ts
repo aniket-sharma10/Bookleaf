@@ -30,7 +30,7 @@ import { edgeCaseRawDataset, toDataset } from "../fixtures/synthetic-dataset";
 import { requestAs, testAdmin, testAuthor } from "../helpers/auth";
 import { connectTestDb, truncateAllTables } from "../helpers/test-db-client";
 
-// Rate limiting (ADR-0009) against bookleaf_test, synthetic accounts only.
+// Rate limiting (architecture §5) against bookleaf_test, synthetic accounts only.
 const passwords = {
   authorPassword: "author-pass-123",
   adminPassword: "admin-pass-123",

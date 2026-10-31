@@ -45,13 +45,6 @@ Optional. Dated factual corrections, or how the decision evolved.
 
 | ADR | Title | Status | Implementation |
 |---|---|---|---|
-| [0001](0001-single-nextjs-app-with-rest-route-handlers.md) | Single Next.js app with REST Route Handlers | Accepted | Partial |
-| [0002](0002-jwt-cookie-auth.md) | Email/password auth with a signed JWT in an HttpOnly cookie | Accepted | Implemented (T2.2–T2.7) |
-| [0003](0003-ai-integration-structured-outputs-graceful-degradation.md) | AI integration: provider boundary, structured outputs, graceful degradation | Accepted (model IDs set 2026-10-31; post-check superseded by 0010) | Implemented (T5.1–T5.9) |
-| [0004](0004-polling-for-near-real-time-updates.md) | Polling for near-real-time ticket updates | Accepted | Implemented (T6.1) |
-| [0005](0005-dataset-preserving-data-model.md) | Dataset-preserving data model | Accepted (retrospective) | Implemented |
-| [0006](0006-isolated-local-databases-and-write-guards.md) | Isolated local databases and write-target guards | Accepted (retrospective; dev DB amended to Neon) | Implemented |
-| [0007](0007-lazy-environment-validation.md) | Lazy environment validation with point-of-use requirements | Accepted (retrospective) | Implemented |
-| [0008](0008-prisma-cli-target-guard.md) | Guard every Prisma CLI command's database target in `prisma.config.ts` | Proposed (awaiting owner approval) | Implemented |
-| [0009](0009-postgres-backed-rate-limiting.md) | Basic rate limiting with Postgres counters | Proposed (awaiting owner approval) | Implemented (T7.8) |
-| [0010](0010-no-pattern-based-draft-post-check.md) | No pattern-based post-check on AI drafts | Accepted | Implemented (T7.9) |
+| [0001](0001-single-nextjs-app-with-rest-route-handlers.md) | Single Next.js app with REST Route Handlers | Accepted | Implemented |
+| [0002](0002-ai-integration-structured-outputs-graceful-degradation.md) | AI integration: provider boundary, structured outputs, graceful degradation | Accepted (model IDs set 2026-10-31; post-check removed in T7.9) | Implemented (T5.1–T5.9) |
+| [0003](0003-polling-for-near-real-time-updates.md) | Polling for near-real-time ticket updates | Accepted | Implemented (T6.1) |

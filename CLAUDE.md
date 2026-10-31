@@ -37,7 +37,7 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
 - Author-scoped code takes `authorId` from the verified token, never from the URL, query or body. Every author query filters by it. Another author's record returns 404.
 - Author responses use explicit `select` DTOs and never include internal notes, drafts, priority, AI fields or assignee.
 - **Secrets** are read only from `src/server/env.ts`.
-  - The exceptions are the CLI entry points (`prisma.config.ts`, `prisma/seed.ts`, `prisma/verify.ts`), which read `process.env` directly (ADR-0007).
+  - The exceptions are the CLI entry points (`prisma.config.ts`, `prisma/seed.ts`, `prisma/verify.ts`), which read `process.env` directly (architecture §8).
   - Never use a `NEXT_PUBLIC_` secret and never log keys.
   - Never commit `.env*`. Only the templates `.env.example` and `.env.test.example` are committed.
 - Seed data must match the supplied JSON exactly. Never invent, "fix" or drop dataset records or fields. ISBNs are masked placeholders, so store them verbatim.
@@ -46,7 +46,7 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
 - **Hosted and production resources:** never connect to, modify or deploy to a hosted or production resource without the owner's explicit approval for that specific operation. This covers Neon or any remote database, Vercel projects and environment variables, deployments, and creating cloud resources. Approval for one operation does not carry over to the next.
 - **Database guards stay intact:**
   - the dev-only seed and verify guard (the Neon dev host registered in `DEV_DATABASE_HOST`, or local Docker dev);
-  - the Prisma CLI guard in `prisma.config.ts` (ADR-0008);
+  - the Prisma CLI guard in `prisma.config.ts` (architecture §8);
   - the test-database guards;
   - Prisma's own AI-agent consent check.
 
@@ -54,7 +54,7 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
 
 ## Conventions
 - TypeScript strict. No `any` without a comment explaining it. Validate all external input with Zod schemas from `src/lib/schemas`.
-- Errors use `{ error: { code, message, details? } }` with the status codes in architecture §4. No bare 500s for expected failures.
+- Errors use `{ error: { code, message, details? } }` with the status codes in `docs/api.md` (Errors). No bare 500s for expected failures.
 - Money is integer rupees, formatted with `lib/format`. Dates are `@db.Date` for dataset dates.
 - Prefer small named functions over clever abstractions. Comment the *why* for non-obvious logic (security checks, AI guardrails, policy maths).
 - **Library references:**
@@ -64,7 +64,7 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
 ## Testing and verification
 - **Standard checks, before a task is marked done:** `npm run lint`, `npm run typecheck`, `npm run format:check` and `npm test`. Also run `npm run build` when routing, configuration or dependencies change, and at phase gates.
 - **Test database:**
-  - Tests use only the `bookleaf_test` DB (Docker container `bookleaf-db-test`, port 55433), loaded from `.env.test`, behind guards that abort on any other database (`tests/helpers/test-database.ts`, ADR-0008).
+  - Tests use only the `bookleaf_test` DB (Docker container `bookleaf-db-test`, port 55433), loaded from `.env.test`, behind guards that abort on any other database (`tests/helpers/test-database.ts`, architecture §8).
   - `npm test` resets it first, so the container must be running (`npm run db:up`).
 - **Tests use synthetic fixtures only** (`tests/fixtures/`). Never load or assert on the confidential dataset in tests. The real-data check is the read-only `npm run db:verify` against the dev database.
 - **Prisma CLI commands are guarded** by `prisma.config.ts`: only the dev DB (registered Neon host or local Docker) or the local test DB, and no `--url`. **The dev DB is the owner's Neon project.**

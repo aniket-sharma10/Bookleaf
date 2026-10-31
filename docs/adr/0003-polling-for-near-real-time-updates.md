@@ -1,4 +1,4 @@
-# 0004. Polling for near-real-time ticket updates
+# 0003. Polling for near-real-time ticket updates
 
 - **Status:** Accepted (owner, 2026-10-30)
 - **Date:** 2026-10-27

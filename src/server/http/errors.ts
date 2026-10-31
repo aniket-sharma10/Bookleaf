@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 
 import { Prisma } from "@/generated/prisma/client";
 
-// Error envelope and status codes: docs/architecture.md §4.
+// Error envelope and status codes: docs/api.md (Errors).
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "UNAUTHENTICATED"

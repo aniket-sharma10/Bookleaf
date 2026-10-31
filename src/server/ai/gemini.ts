@@ -14,7 +14,7 @@ import {
   type StructuredGenerator,
 } from "./provider";
 
-// The only module that imports the Gemini SDK (ADR-0003, architecture §6.1).
+// The only module that imports the Gemini SDK (ADR-0002, architecture §6.1).
 // Settings verified against @google/genai 2.32.0 and Google's docs:
 // - thinking can't be disabled on these models, only reduced, so each task
 //   sets the lowest level that does the job;

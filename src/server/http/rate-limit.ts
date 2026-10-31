@@ -4,7 +4,7 @@ import { getDb } from "@/server/db";
 
 import { RateLimitedError } from "./errors";
 
-// Basic rate limiting (ADR-0009): fixed-window counters in Postgres, so every
+// Basic rate limiting (architecture §5): fixed-window counters in Postgres, so every
 // server instance shares them without extra infrastructure. Limits are
 // generous: they stop scripted abuse (password guessing, ticket spam, burning
 // the AI quota), not normal use by several people sharing a demo account.

@@ -98,7 +98,7 @@ export type QueueTicket = {
   updatedAt: string;
 };
 
-/** List envelope: `{ data, page, pageSize, total }` (architecture §4). */
+/** List envelope: `{ data, page, pageSize, total }` (docs/api.md). */
 export type Page<T> = {
   data: T[];
   page: number;
