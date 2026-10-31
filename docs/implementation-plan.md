@@ -42,7 +42,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T5.2 | Knowledge-base module | T3.1 | done |
 | T5.3 | Classification service | T5.1, T5.2 | done |
 | T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | done |
-| T5.5 | Royalty policy facts and draft context builder | T5.2, T3.2 | todo |
+| T5.5 | Royalty policy facts and draft context builder | T5.2, T3.2 | done |
 | T5.6 | Draft service and endpoint | T5.1, T5.5, T4.2 | todo |
 | T5.7 | Draft safety post-check | T5.6 | todo |
 | T5.8 | Admin draft UI | T5.6, T5.7, T4.8 | todo |
@@ -575,6 +575,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - `server/ai/draft-context.ts` `buildDraftContext(ticketId)`: ticket subject/description (redacted, truncated), the last ≤3 author-visible replies (redacted, truncated; sender shown as "BookLeaf Support", never admin names), the referenced book's verified fields (or a compact list for General), derived facts (payout deadline, threshold, never-paid, production stage), ticket status, and KB sections. Never: author name, email, phone, city, IDs, internal notes, assignee, admin names. The greeting uses the literal `[AUTHOR_FIRST_NAME]`, which code replaces after generation, so the name is never sent.
 - **Acceptance:** unit tests: deadlines (2026-10-27 → 2026-11-14; 2026-12-10 → 2027-02-14); in-production book gives the stage and no MRP; below-threshold flag; General lists compact books; a test serialises the **whole** context and asserts that the author's name, email, phone, city, IDs, notes and admin names are absent and that a seeded email/phone in the ticket text is redacted; size bound.
 - **Verify:** `npm test`.
+- **Outcome (2026-10-31):**
+  - `server/policies/royalty.ts`: `payoutDeadlineFor` (next deadline on or after today: 15 May, 14 Aug, 14 Nov, 14 Feb) and `neverPaid`. `server/ai/draft-context.ts`: `buildDraftContext` → four blocks (`ticket`, `previous_replies`, `verified_facts`, `knowledge_base`) plus `authorFirstName` kept aside; `renderDraftUserTurn`. The facts state what support can't see (bank details, payout records, per-platform breakdowns), so the model knows to ask rather than guess.
+  - `redact.ts` (built in T5.3) now takes `{ author, staff }`, so staff names in past replies become `[STAFF]`; numbers after "account", "A/C no.", "IFSC" or "card" are labelled `[number]`.
+  - Tests: 15 new (deadlines incl. leap year and same-day, never-paid, staff names, account labels; the context's facts, threshold, General list without other authors' books, a whole-prompt privacy check for 13 private items, reply limit and order, KB selection, delimiter stripping, size under 12,000 characters); suite 331/331.
 
 ### T5.6 Draft service and endpoint
 - **Reqs:** DRAFT-01, DRAFT-04–09, AI-08

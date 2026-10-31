@@ -66,7 +66,10 @@ export type ClassificationInput = {
 /** The user turn: redacted, clipped ticket text plus the book's stage only. */
 export function buildClassificationInput(ticket: ClassificationInput): string {
   const clean = (text: string, max: number) =>
-    stripDelimiters(clip(redact(text, ticket.authorName), max), TAGS);
+    stripDelimiters(
+      clip(redact(text, { author: ticket.authorName }), max),
+      TAGS,
+    );
   return [
     "<ticket>",
     `Subject: ${clean(ticket.subject, 200)}`,

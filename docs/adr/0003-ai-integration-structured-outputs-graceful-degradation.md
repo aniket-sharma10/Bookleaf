@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (owner, 2026-10-30). Model IDs set by the owner on 2026-10-31 (see History).
 - **Date:** 2026-10-27
-- **Implementation:** partial. Persistence (`AiDraft`, `AiCallLog`, AI fields on `Ticket`; T1.5, with `thinkingTokens`/`promptVersion` added in T5.1) the provider boundary (`src/server/ai/provider.ts`, `gemini.ts`, `client.ts`; T5.1) the KB module (`knowledge-base.ts`; T5.2) classification with redaction (`classify.ts`, `redact.ts`; T5.3), run in the background on ticket creation, plus an admin retry endpoint (T5.4). No drafting yet (T5.5–T5.9).
+- **Implementation:** partial. Persistence (`AiDraft`, `AiCallLog`, AI fields on `Ticket`; T1.5, with `thinkingTokens`/`promptVersion` added in T5.1) the provider boundary (`src/server/ai/provider.ts`, `gemini.ts`, `client.ts`; T5.1) the KB module (`knowledge-base.ts`; T5.2) classification with redaction (`classify.ts`, `redact.ts`; T5.3), run in the background on ticket creation, plus an admin retry endpoint (T5.4); payout-deadline facts and the draft context builder (T5.5). No draft generation yet (T5.6–T5.9).
 - **Requirements:** AI-01–09, DRAFT-01–09, TICKET-05, MGMT-04
 
 ## Context
