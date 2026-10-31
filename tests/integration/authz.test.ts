@@ -54,6 +54,11 @@ const MATRIX: MatrixEntry[] = [
     method: "GET",
     expected: { anonymous: 401, author: 200, admin: 200 },
   },
+  {
+    route: "author/books",
+    method: "GET",
+    expected: { anonymous: 401, author: 200, admin: 403 },
+  },
 ];
 
 const API_DIR = resolve(process.cwd(), "src/app/api");

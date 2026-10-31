@@ -135,7 +135,7 @@ Design rules (rationale in **ADR-0005**):
 | POST | `/api/auth/login` | public | `{email,password}` → sets HttpOnly JWT cookie, returns user `{id,name,role,authorId}` (never the token) | Generic 401 on failure. Email is trimmed and lowercased |
 | POST | `/api/auth/logout` | any signed-in | Clears the cookie → `{loggedOut:true}` | 401 without a session |
 | GET | `/api/auth/me` | any signed-in | Current user `{id,name,role,authorId}` | 401 if the user no longer exists |
-| GET | `/api/author/books` | AUTHOR | Own books (all 15 fields) and totals | |
+| GET | `/api/author/books` | AUTHOR | Own books (all 15 fields), totals, and `payout { thresholdInr, belowThreshold }` | Dates as `YYYY-MM-DD` |
 | GET | `/api/author/tickets` | AUTHOR | Own tickets (summary DTO) | |
 | POST | `/api/author/tickets` | AUTHOR | `{bookId|null, subject, description}` → 201 | Book must be owned. Schedules classification. |
 | GET | `/api/author/tickets/:id` | AUTHOR | Own ticket and message thread | 404 if not own. No notes, drafts, priority or AI fields. |

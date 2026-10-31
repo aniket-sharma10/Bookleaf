@@ -24,7 +24,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T2.6 | Login page, proxy, portal shells | T2.5 | done |
 | T2.7 | Authorization test matrix (baseline) | T2.5 | done |
 | T3.1 | Shared labels, schemas, formatters | T1.5 | done |
-| T3.2 | Books API | T2.4, T3.1 | todo |
+| T3.2 | Books API | T2.4, T3.1 | done |
 | T3.3 | Author dashboard and My Books UI | T2.6, T3.2 | todo |
 | T3.4 | Ticket creation API | T2.4, T3.1 | todo |
 | T3.5 | Author ticket read APIs | T3.4 | todo |
@@ -340,6 +340,12 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `server/services/books.ts` `listBooksForAuthor(authorId)` returns the 15 fields plus totals. `GET /api/author/books`.
 - **Acceptance:** an author gets all of their books, including an in-production one, and never another author's. The totals equal the sums of the author's book values. Tests use synthetic fixtures (`tests/fixtures/`), never the real dataset; the real-data check is `npm run db:verify`. An admin gets 403.
 - **Verify:** integration tests. Add the route to the authz matrix.
+- **Outcome (2026-10-31):**
+  - `server/services/books.ts` `listBooksForAuthor` and `GET /api/author/books` → `{ books, totals, payout }`. Calendar dates are returned as `YYYY-MM-DD`; response types live in `src/lib/api-types.ts`.
+  - Added `server/policies/royalty.ts` (`MIN_PAYOUT_INR`, `isBelowPayoutThreshold`: pending above ₹0 and below ₹1,000), so the BOOK-07 hint is decided on the server.
+  - Tests: 7 integration tests (synthetic), a policy unit test, and the matrix row; suite 191/191.
+  - Real data (dev DB, `next start`): all 10 authors get exactly their own books (18 in total), totals equal the dataset sums, and only AUTH009 is below the threshold.
+  - Build order for the rest of Phase 3: T3.4 and T3.5 come before T3.3, because the dashboard's open-ticket count (BOOK-05) needs the ticket list.
 
 ### T3.3 Author dashboard and My Books UI
 - **Reqs:** BOOK-01–07
