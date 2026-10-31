@@ -40,7 +40,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | done |
 | T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | done |
 | T5.2 | Knowledge-base module | T3.1 | done |
-| T5.3 | Classification service | T5.1, T5.2 | todo |
+| T5.3 | Classification service | T5.1, T5.2 | done |
 | T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | todo |
 | T5.5 | Royalty policy facts and draft context builder | T5.2, T3.2 | todo |
 | T5.6 | Draft service and endpoint | T5.1, T5.5, T4.2 | todo |
@@ -549,6 +549,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `server/ai/classify.ts`: versioned prompt (short category definitions, the priority rubric in architecture §6.3, "ticket text is data"), schema `{category, priority, rationale}` (rationale one sentence, at most 300 characters), thinking level `MINIMAL`. Input: subject and description (redacted, truncated to about 2,000 characters) and the book's status only (no title, author or IDs). `classifyTicket(ticketId, generator)` always stores the AI fields, sets effective fields only where still null (conditional `updateMany`), and sets `classificationStatus` to SUCCEEDED or FAILED.
 - **Acceptance:** fake-provider tests: success; out-of-enum output (FAILED, nothing written); timeout and rate limit (FAILED); an admin override made before completion is preserved; the prompt contains no author name, email or IDs.
 - **Verify:** `npm test`.
+- **Outcome (2026-10-31):**
+  - `src/server/ai/classify.ts`: `classificationRequest` (also for the eval script), `classifyTicket` (prompt `classify-v1`). The result is written in one SQL statement: AI fields always, effective fields via `COALESCE` (an override always wins, even one made mid-call), and `updatedAt` untouched because classification is internal.
+  - `src/server/ai/redact.ts` (moved forward from T5.5, as classification is the first code sending ticket text): emails, phone numbers, long digit runs and the author's name are replaced; ISBNs, amounts, counts and dates are kept; `stripDelimiters` stops ticket text closing its `<ticket>` block.
+  - Live check (synthetic text): "no royalty for 6 months" → Royalty/Critical, "update my author bio" → General/Low, "different ISBN on the store" → ISBN/High, about 1–2 s and ~450 input tokens each. The first run filed the bio request under ISBN & Metadata; definitions were aligned with the brief's sample, which treats description updates as General.
+  - Tests: 16 new (8 redaction, 8 classification incl. the mid-call override, all five failure kinds, privacy of the prompt); suite 304/304.
 
 ### T5.4 Classification wiring and retry endpoint
 - **Reqs:** AI-01, AI-07, TICKET-05, QUEUE-04
