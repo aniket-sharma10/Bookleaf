@@ -24,6 +24,7 @@ import {
   type FieldIssue,
 } from "@/lib/api-client";
 import type { AuthorBooksResponse, AuthorTicket } from "@/lib/api-types";
+import { isInProduction } from "@/lib/books";
 import { GENERAL_BOOK_LABEL } from "@/lib/labels";
 import { createTicketSchema, LIMITS } from "@/lib/schemas/tickets";
 import { cn } from "@/lib/utils";
@@ -41,10 +42,6 @@ function toFieldErrors(issues: FieldIssue[]): FieldErrors {
     if (field && !errors[field]) errors[field] = message;
   }
   return errors;
-}
-
-function isInProduction(status: string): boolean {
-  return status.toLowerCase().startsWith("in production");
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {

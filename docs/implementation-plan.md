@@ -25,7 +25,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T2.7 | Authorization test matrix (baseline) | T2.5 | done |
 | T3.1 | Shared labels, schemas, formatters | T1.5 | done |
 | T3.2 | Books API | T2.4, T3.1 | done |
-| T3.3 | Author dashboard and My Books UI | T2.6, T3.2 | todo |
+| T3.3 | Author dashboard and My Books UI | T2.6, T3.2 | done |
 | T3.4 | Ticket creation API | T2.4, T3.1 | done |
 | T3.5 | Author ticket read APIs | T3.4 | done |
 | T3.6 | New-ticket form UI | T2.6, T3.2, T3.4 | done |
@@ -353,6 +353,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `/author` page with summary cards and a books table (cards on narrow screens). Handle the in-production badge, "Not yet published", "No payout yet" and the threshold hint. Add a link to "Raise a query". Use the SWR fetcher in `lib/api-client.ts`.
 - **Acceptance:** check AUTH007 and AUTH009 visually: no `null`, `NaN` or "Invalid Date". Loading and error states render.
 - **Verify:** manual browser check with AUTH007, AUTH009 and AUTH002.
+- **Outcome (2026-10-31):**
+  - `/author` with `features/author-dashboard/dashboard.tsx` (stat cards: books, earned, paid, pending, open queries; payout hint from the API's `payout.belowThreshold`) and `books-section.tsx` (table with totals row on wide screens, cards below `lg`). `components/book-status-badge.tsx` and `src/lib/books.ts` (`isInProduction`, `productionStage`, unit-tested; the new-ticket form uses it too).
+  - Browser check (local Docker dev DB): AUTH007 (in-production book: "Not yet published", "—" MRP, ₹0, "No payout yet"; totals and open-query count right; no hint), AUTH009 (hint shown for ₹850 pending), AUTH002 at phone width (cards, no hint). No `null`, `NaN` or "Invalid Date". Loading skeleton and error state with retry forced in the browser.
+  - **Phase 3 gate met:** dashboard and books incl. edge cases (T3.3), ticket create/list/view (T3.4–T3.7), cross-author tests for books and tickets (T3.2, T3.4, T3.5), loading/empty/error states on every author page. Suite 217/217; build passes.
 
 ### T3.4 Ticket creation API
 - **Reqs:** TICKET-01, TICKET-04, TICKET-05, AUTH-06

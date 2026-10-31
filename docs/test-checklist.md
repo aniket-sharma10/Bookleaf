@@ -34,3 +34,12 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] Subject and details show live character counts.
 - [x] Chosen attachment names are listed, with the note that attachments aren't uploaded.
 - [x] A valid submission opens the new ticket (Open, no replies), and it appears in My tickets.
+
+## Dashboard and My books (BOOK-01 to BOOK-07)
+
+- [x] Stat cards show book count (with published / in production), royalty earned, paid and pending (sums of the book values) and open queries, with a link to My tickets.
+- [x] AUTH007's in-production book shows "In production · Cover Design", "Not yet published", "—" for MRP, ₹0 amounts and "No payout yet".
+- [x] Only AUTH009 sees the payout-threshold hint (₹850 pending, below ₹1,000).
+- [x] Wide screens show a table with a totals row; phones show one card per book with every field, including print partner and platforms.
+- [x] No `null`, `NaN` or "Invalid Date" anywhere (AUTH002, AUTH007, AUTH009).
+- [x] The loading skeleton and the error state with "Try again" render (forced in DevTools).

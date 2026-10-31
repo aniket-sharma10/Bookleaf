@@ -1,8 +1,8 @@
-import { Library } from "lucide-react";
 import type { Metadata } from "next";
 
-import { EmptyState } from "@/components/empty-state";
 import { PageHeading } from "@/components/page-heading";
+import { AuthorDashboard } from "@/features/author-dashboard/dashboard";
+import { RaiseQueryButton } from "@/features/author-tickets/ticket-list";
 import { requirePortalUser } from "@/server/auth/guards";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -15,12 +15,9 @@ export default async function AuthorDashboardPage() {
         eyebrow="Dashboard"
         title={`Welcome, ${user.name}`}
         description="Your books, royalties and support queries with BookLeaf."
+        actions={<RaiseQueryButton />}
       />
-      <EmptyState
-        icon={Library}
-        title="Your account at a glance"
-        description="Your books, royalty totals and support queries will appear here."
-      />
+      <AuthorDashboard />
     </>
   );
 }
