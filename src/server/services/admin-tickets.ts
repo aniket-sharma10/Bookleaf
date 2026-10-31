@@ -1,8 +1,17 @@
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
-import type { AdminTicketDetail, Page, QueueTicket } from "@/lib/api-types";
-import type { QueueQuery, UpdateTicketInput } from "@/lib/schemas/tickets";
+import type {
+  AdminTicketDetail,
+  InternalNote,
+  Page,
+  QueueTicket,
+} from "@/lib/api-types";
+import type {
+  CreateNoteInput,
+  QueueQuery,
+  UpdateTicketInput,
+} from "@/lib/schemas/tickets";
 import { getDb } from "@/server/db";
 import { NotFoundError } from "@/server/http/errors";
 
@@ -187,4 +196,35 @@ export async function updateTicket(
     },
   });
   return getTicketForAdmin(ticketId);
+}
+
+async function assertTicketExists(ticketId: string): Promise<void> {
+  const ticket = await getDb().ticket.findUnique({
+    where: { id: ticketId },
+    select: { id: true },
+  });
+  if (!ticket) throw new NotFoundError("Ticket not found.");
+}
+
+/**
+ * Adds an internal note (MGMT-02). Notes live in their own table that no
+ * author query selects. The ticket's updatedAt is deliberately left alone:
+ * authors can see it, and internal activity must not show through.
+ */
+export async function addInternalNote(
+  ticketId: string,
+  { body }: CreateNoteInput,
+  adminId: string,
+): Promise<InternalNote> {
+  await assertTicketExists(ticketId);
+  const note = await getDb().internalNote.create({
+    data: { ticketId, createdById: adminId, body },
+    select: {
+      id: true,
+      body: true,
+      createdAt: true,
+      createdBy: { select: { id: true, name: true } },
+    },
+  });
+  return { ...note, createdAt: note.createdAt.toISOString() };
 }

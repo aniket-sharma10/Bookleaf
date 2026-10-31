@@ -34,7 +34,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.2 | Admin ticket detail API | T4.1 | done |
 | T4.3 | Admin queue UI | T4.1, T2.6 | todo |
 | T4.4 | Ticket update API (status, overrides, assign to self) | T4.2 | done |
-| T4.5 | Internal notes API | T4.2 | todo |
+| T4.5 | Internal notes API | T4.2 | done |
 | T4.6 | Admin response API | T4.2 | todo |
 | T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | todo |
 | T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | todo |
@@ -454,6 +454,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `POST /api/admin/tickets/[id]/notes`.
 - **Acceptance:** the note appears in admin detail and never in the author detail (asserted).
 - **Verify:** integration tests.
+- **Outcome (2026-10-31):**
+  - `addInternalNote` in `server/services/admin-tickets.ts` and `POST /api/admin/tickets/[id]/notes` → 201 `InternalNote`; unknown ticket → 404.
+  - A note does not touch the ticket's `updatedAt`, because authors see that timestamp (tested).
+  - Tests: 3 integration tests plus the matrix row; suite 255/255; build passes.
 
 ### T4.6 Admin response API
 - **Reqs:** MGMT-04, MGMT-05, DRAFT-03

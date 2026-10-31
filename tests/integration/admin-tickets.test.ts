@@ -4,9 +4,16 @@ import {
   GET as getTicket,
   PATCH as patchTicket,
 } from "@/app/api/admin/tickets/[id]/route";
+import { POST as postNote } from "@/app/api/admin/tickets/[id]/notes/route";
 import { GET as listQueue } from "@/app/api/admin/tickets/route";
+import { GET as getAuthorTicket } from "@/app/api/author/tickets/[id]/route";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { AdminTicketDetail, Page, QueueTicket } from "@/lib/api-types";
+import type {
+  AdminTicketDetail,
+  InternalNote,
+  Page,
+  QueueTicket,
+} from "@/lib/api-types";
 import { seedDataset } from "../../prisma/dataset";
 import { edgeCaseRawDataset, toDataset } from "../fixtures/synthetic-dataset";
 import { requestAs, testAuthor } from "../helpers/auth";
@@ -479,5 +486,92 @@ describe("PATCH /api/admin/tickets/:id", () => {
     );
     expect((await patch({ status: "OPEN" }, testAuthor)).status).toBe(403);
     expect((await patch({ status: "OPEN" }, null)).status).toBe(401);
+  });
+});
+
+/** POST helper for the per-ticket admin sub-routes. */
+async function postTo(
+  handler: typeof postNote,
+  ticketId: string,
+  body: unknown,
+  user: Parameters<typeof requestAs>[0] = me,
+) {
+  return handler(
+    await requestAs(user, `${BASE}/${ticketId}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+    { params: Promise.resolve({ id: ticketId }) },
+  );
+}
+
+/** The ticket as its author (A1) sees it, as raw JSON text. */
+async function authorViewText(ticketId: string): Promise<string> {
+  const response = await getAuthorTicket(
+    await requestAs(
+      { id: "user-a1", role: "AUTHOR", authorId: "A1" },
+      `http://localhost:3000/api/author/tickets/${ticketId}`,
+    ),
+    { params: Promise.resolve({ id: ticketId }) },
+  );
+  expect(response.status).toBe(200);
+  return response.text();
+}
+
+describe("POST /api/admin/tickets/:id/notes", () => {
+  it("adds a note that admins see and the author never does (MGMT-02, TICKET-08)", async () => {
+    const ticket = await db.ticket.create({
+      data: {
+        authorId: "A1",
+        subject: "Notes",
+        description: "Fixture ticket.",
+      },
+    });
+    const before = ticket.updatedAt.toISOString();
+
+    const response = await postTo(postNote, ticket.id, {
+      body: "  INTERNAL: author called twice  ",
+    });
+    expect(response.status).toBe(201);
+    const { data } = (await response.json()) as { data: InternalNote };
+    expect(data).toEqual({
+      id: expect.any(String),
+      body: "INTERNAL: author called twice",
+      createdBy: { id: me.id, name: "Me Admin" },
+      createdAt: expect.any(String),
+    });
+
+    const admin = (await (await detail(ticket.id)).json()) as {
+      data: AdminTicketDetail;
+    };
+    expect(admin.data.notes.map((n) => n.body)).toEqual([
+      "INTERNAL: author called twice",
+    ]);
+    // Internal activity doesn't show through the author-visible timestamp.
+    expect(admin.data.updatedAt).toBe(before);
+
+    const authorText = await authorViewText(ticket.id);
+    expect(authorText).not.toContain("INTERNAL");
+    expect(authorText).not.toContain('"notes"');
+  });
+
+  it("rejects a blank or oversized body and extra fields (400)", async () => {
+    for (const body of [
+      { body: "   " },
+      { body: "x".repeat(5001) },
+      { body: "ok", status: "CLOSED" },
+    ]) {
+      expect((await postTo(postNote, t.critical!, body)).status).toBe(400);
+    }
+  });
+
+  it("answers 404 for an unknown ticket and 403 for an author", async () => {
+    expect(
+      (await postTo(postNote, "no-such-ticket", { body: "x" })).status,
+    ).toBe(404);
+    expect(
+      (await postTo(postNote, t.critical!, { body: "x" }, testAuthor)).status,
+    ).toBe(403);
   });
 });
