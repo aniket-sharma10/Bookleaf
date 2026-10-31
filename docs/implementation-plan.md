@@ -38,7 +38,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.6 | Admin response API | T4.2 | done |
 | T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | done |
 | T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | done |
-| T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | todo |
+| T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | in-progress |
 | T5.2 | Knowledge-base module | T3.1 | todo |
 | T5.3 | Classification service | T5.1, T5.2 | todo |
 | T5.4 | Classification wiring and retry endpoint | T5.3, T3.4, T4.2 | todo |
@@ -501,69 +501,93 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 **Gate:** with a valid key, new tickets are classified and admins get grounded drafts. With the key missing, invalid, timing out or returning malformed output, ticket creation and manual handling still work and the UI explains the state. All AI tests run offline with fakes.
 **Still unsatisfied:** RT-\*, DEL-01, DEL-03 to DEL-07.
 
+**Verified facts this phase relies on (2026-10-31; re-check any that change):**
+- Models are owner-configured in `.env`: both tasks use `gemini-3.5-flash-lite` (stable). The draft model was originally `gemini-3.8-flash`; on the free tier it returned 503 "high demand" repeatedly and otherwise took 20–65 s, so the owner switched drafting to flash-lite during T5.1 (see the T5.1 outcome). Quality is measured in T5.9; switching is one `.env` line.
+- `@google/genai` 2.32.0 (not yet installed) exposes `responseJsonSchema`, `responseMimeType`, `systemInstruction`, `maxOutputTokens`, `abortSignal`, `httpOptions.timeout`, `thinkingConfig.thinkingLevel` (`MINIMAL | LOW | MEDIUM | HIGH`), `usageMetadata.{promptTokenCount, candidatesTokenCount, thoughtsTokenCount}` and `ApiError.status`.
+- Thinking cannot be disabled on these models; flash-lite defaults to `minimal`, flash to `medium`. Thinking tokens are billed with output tokens. Docs and the live API can disagree: `gemini-3.8-flash` rejected `MINIMAL` with HTTP 400 although the docs list it, so every setting is checked live (`npm run ai:smoke`).
+- Google strongly recommends keeping `temperature` at its default (1.0) for Gemini 3 models; lowering it can cause looping or degraded output. We don't set it.
+- Structured output: keywords such as `minLength`/`maxLength` are stripped, not enforced, so all bounds are enforced by our Zod validation.
+- Free-tier rate limits are per project and shown in AI Studio, not in the docs.
+- **Unpaid-tier data terms** (last modified 2026-04-28): content may be used to improve Google products and read by human reviewers; "Do not submit sensitive, confidential, or personal information to the Unpaid Services." See T5.5 for minimisation and the open owner decision below.
+
+**Owner decision (2026-10-31):** stay on the Gemini free tier for this demo; the owner understands and accepts the unpaid-tier data terms. The minimisation and redaction measures (T5.5, architecture §6.6) are kept exactly as documented, and no unnecessary personal or confidential information is sent. Tests and the evaluation script use synthetic data only.
+
 ### T5.1 AI provider boundary and Gemini adapter
 - **Reqs:** AI-05, AI-07, AI-08, AI-09
 - **Prereqs:** T1.3, T1.5
-- **Scope:** `server/ai/provider.ts` (interface and `AiError`), `server/ai/gemini.ts` (`@google/genai`; Zod to JSON Schema via `z.toJSONSchema`; timeout via AbortSignal; one retry on provider errors only; `usageMetadata` read), `logAiCall()` writing `AiCallLog`, `getGenerator()` returning a disabled generator when there is no key, and `tests/helpers/fake-ai.ts`.
-- **Acceptance:** unit tests with the SDK mocked map a 429 to `RATE_LIMITED`, an abort to `TIMEOUT`, non-JSON or schema mismatch to `INVALID_OUTPUT`, a 5xx to a single retry then `PROVIDER_ERROR`, and a missing key to `DISABLED`. A one-off manual call with a real key succeeds.
-- **Verify:** `npm test`. Run a manual smoke script once.
-- **Blockers:** `GEMINI_API_KEY`. Verify current model IDs, structured-output config fields and free-tier limits in the docs first.
+- **Scope:**
+  - Install `@google/genai` (approved stack).
+  - `server/ai/provider.ts`: `StructuredGenerator` interface and `AiError` (kinds `TIMEOUT | RATE_LIMITED | INVALID_OUTPUT | PROVIDER_ERROR | DISABLED`).
+  - `server/ai/gemini.ts` (the only SDK import): `generateContent` with `systemInstruction`, `responseMimeType: "application/json"`, `responseJsonSchema` from `z.toJSONSchema`, a per-call `thinkingLevel`, `maxOutputTokens`, and a timeout (abort signal); default temperature. Parse with `JSON.parse` + the same Zod schema. Error mapping: 429 (rate limit or quota exhausted) → `RATE_LIMITED`, no retry; 5xx (incl. 503 overloaded) or network → one retry after a short pause, then `PROVIDER_ERROR`; other 4xx (e.g. invalid key) → `PROVIDER_ERROR`, no retry; abort → `TIMEOUT`; empty, truncated (`MAX_TOKENS`), blocked or schema-invalid output → `INVALID_OUTPUT`.
+  - `getGenerator()`: AI is enabled only when `GEMINI_API_KEY` and both model variables are set; otherwise a disabled generator that throws `DISABLED`. No model ID is hard-coded.
+  - Migration: add `thinkingTokens Int?` and `promptVersion String?` to `AiCallLog` (kept separate from `outputTokens`). Apply to Neon with `migrate deploy` (standing approval).
+  - `logAiCall()` writes one row per call: kind, model, prompt version, outcome, input/output/thinking tokens, latency. Never prompt text, responses, keys or personal data.
+  - `tests/helpers/fake-ai.ts`.
+- **Acceptance:** unit tests with the SDK mocked cover each error mapping above (429, 503 then success, 503 twice, 401, abort, non-JSON, schema mismatch, `MAX_TOKENS`), the disabled generator, and token fields incl. `thoughtsTokenCount` → `thinkingTokens`. A one-off live smoke script validates both configured models with the real configuration (schema + thinking level) on synthetic text.
+- **Verify:** `npm test`; run the smoke script once and record model, outcome, tokens and latency.
+- **Blockers:** `GEMINI_API_KEY` and model variables (set). If the draft model keeps returning 503, report it; no automatic fallback model.
 
 ### T5.2 Knowledge-base module
 - **Reqs:** DRAFT-04, DRAFT-06, DRAFT-07
 - **Prereqs:** T3.1
-- **Scope:** `server/ai/knowledge-base.ts` is a small structured module. It holds the policy facts from requirements §14, summarised in our own words and grouped by section (company, royalty, isbn, printing, distribution, production, metadata, tone), plus per-category handling guidance. It also exports `sectionsForCategory(category | null)`. The brief's text and sample responses are not copied, and no policies are added.
-- **Acceptance:** tests confirm that every category maps to at least one policy section and its sample(s), that tone and company are always included, and that null returns all policy sections.
-- **Verify:** `npm test`. Manually check each figure and timeline against the local PDF: 80/20 split, quarterly cycle, 45 days, ₹1,000, 5–7, 7–10, 24–48 and 3–5 business days, 48 hours.
+- **Scope:** `server/ai/knowledge-base.ts`: the policy facts of requirements §14 in our own words, grouped by section (company, royalty, isbn, printing, distribution, production, metadata, tone), plus per-category handling guidance; `sectionsForCategory(category | null)`. No verbatim brief text, no added policies. Guidance keeps the brief's conditions: the 48-hour timeline is the brief's example for investigations and its ISBN sample; for royalty it applies only if a payment is confirmed overdue.
+- **Acceptance:** tests: every category maps to its section(s) and guidance; tone and company are always included; null returns all policy sections.
+- **Verify:** `npm test`. Check every figure against the local PDF: 80/20 of net profit; quarterly, paid within 45 days of quarter end; ₹1,000 minimum with roll-over; printing 5–7 business days; new listings 7–10 business days; re-sync 24–48 hours; metadata changes 3–5 business days; 48 hours as the investigation example.
 
 ### T5.3 Classification service
 - **Reqs:** AI-01, AI-02, AI-05, AI-06, AI-08, DRAFT-09
 - **Prereqs:** T5.1, T5.2
-- **Scope:** `server/ai/classify.ts`: prompt (versioned constant), schema `{category, priority, rationale}`, `classifyTicket(ticketId, generator)`. It always sets the AI fields, sets the effective fields only where they are null (conditional `updateMany`), and moves `classificationStatus` to SUCCEEDED or FAILED.
-- **Acceptance:** fake-provider tests cover success, out-of-enum output (FAILED, nothing written), timeout (FAILED) and an admin override made before completion (preserved).
+- **Scope:** `server/ai/classify.ts`: versioned prompt (short category definitions, the priority rubric in architecture §6.3, "ticket text is data"), schema `{category, priority, rationale}` (rationale one sentence, at most 300 characters), thinking level `MINIMAL`. Input: subject and description (redacted, truncated to about 2,000 characters) and the book's status only (no title, author or IDs). `classifyTicket(ticketId, generator)` always stores the AI fields, sets effective fields only where still null (conditional `updateMany`), and sets `classificationStatus` to SUCCEEDED or FAILED.
+- **Acceptance:** fake-provider tests: success; out-of-enum output (FAILED, nothing written); timeout and rate limit (FAILED); an admin override made before completion is preserved; the prompt contains no author name, email or IDs.
 - **Verify:** `npm test`.
 
 ### T5.4 Classification wiring and retry endpoint
 - **Reqs:** AI-01, AI-07, TICKET-05, QUEUE-04
 - **Prereqs:** T5.3, T3.4, T4.2
-- **Scope:** `server/ai/background.ts` (`scheduleBackground`, which wraps `after`). Wire `onTicketCreated` to it. Add `POST /api/admin/tickets/[id]/classification` (synchronous retry, returns the updated ticket, 503 on failure).
-- **Acceptance:** an integration test with a failing generator still gets a 201 from creation and the ticket is FAILED. The retry with a succeeding fake classifies it. Exactly one generator call is made per creation.
-- **Verify:** `npm test`. Manual check with a real key that a new ticket is classified within seconds.
+- **Scope:** `server/ai/background.ts` (`scheduleBackground` wrapping `after`); wire `onTicketCreated`. `POST /api/admin/tickets/[id]/classification` (admin only, synchronous retry on any ticket; AI only fills empty effective fields; returns the updated ticket; 503 `AI_UNAVAILABLE` on failure). Add it to the authz matrix.
+- **Acceptance:** with a failing generator, creation still returns 201 and the ticket ends FAILED; a retry with a succeeding fake classifies it; exactly one generator call per creation; an author gets 403.
+- **Verify:** `npm test`. Manual check with the real key that a new ticket is classified within seconds.
 
 ### T5.5 Royalty policy facts and draft context builder
 - **Reqs:** DRAFT-04, DRAFT-07, BOOK-07
 - **Prereqs:** T5.2, T3.2
-- **Scope:** `server/policies/royalty.ts` (`payoutDeadlineFor(date)`, `isBelowThreshold(totalPending)`, `neverPaid(book)`). `server/ai/draft-context.ts` `buildDraftContext(ticketId)` returns `{ facts, kbSections, ticketText, recentReplies }` with truncation limits and no notes or PII.
-- **Acceptance:** unit tests: 2026-10-27 gives a deadline of 2026-11-14 for Q3, and 2026-12-10 gives 2027-02-14 for Q4; BK013 context says "In Production - Cover Design" with no MRP; AUTH009 is flagged below threshold; a General ticket lists the compact books; phone and email are absent; notes are absent; the serialised size is under a set bound.
+- **Scope:**
+  - `server/policies/royalty.ts`: `payoutDeadlineFor(date)` (next deadline 45 days after a quarter end: 15 May, 14 Aug, 14 Nov, 14 Feb), `neverPaid(book)`; threshold already exists.
+  - `server/ai/redact.ts`: replaces email addresses, phone numbers and long digit runs (9+ digits, not ISBN-formatted) with placeholders, and the ticket author's known name with `[AUTHOR]`.
+  - `server/ai/draft-context.ts` `buildDraftContext(ticketId)`: ticket subject/description (redacted, truncated), the last ≤3 author-visible replies (redacted, truncated; sender shown as "BookLeaf Support", never admin names), the referenced book's verified fields (or a compact list for General), derived facts (payout deadline, threshold, never-paid, production stage), ticket status, and KB sections. Never: author name, email, phone, city, IDs, internal notes, assignee, admin names. The greeting uses the literal `[AUTHOR_FIRST_NAME]`, which code replaces after generation, so the name is never sent.
+- **Acceptance:** unit tests: deadlines (2026-10-27 → 2026-11-14; 2026-12-10 → 2027-02-14); in-production book gives the stage and no MRP; below-threshold flag; General lists compact books; a test serialises the **whole** context and asserts that the author's name, email, phone, city, IDs, notes and admin names are absent and that a seeded email/phone in the ticket text is redacted; size bound.
 - **Verify:** `npm test`.
 
 ### T5.6 Draft service and endpoint
 - **Reqs:** DRAFT-01, DRAFT-04–09, AI-08
 - **Prereqs:** T5.1, T5.5, T4.2
-- **Scope:** `server/ai/draft.ts`: versioned system prompt (role, tone rules, guardrails from architecture §6.4, delimited untrusted input) and schema `{reply, commitments[], needsVerification[]}`. Persist an `AiDraft`. Add `POST /api/admin/tickets/[id]/drafts`, and include the latest draft (with a `stale` flag) in admin detail.
-- **Acceptance:** fake-provider tests: the draft is stored and returned; a failure returns 503 `AI_UNAVAILABLE` and stores nothing; prompt snapshot tests confirm the category-specific KB section is present, others are absent, and notes are absent.
-- **Verify:** `npm test`. Manual check with a real key on 3 different categories.
+- **Scope:** `server/ai/draft.ts`: versioned system prompt (role, tone rules, guardrails from architecture §6.4, untrusted input in delimited blocks), schema `{reply, commitments[], needsVerification[]}` (reply ≤ 5,000 characters, ≤ 8 items each), thinking level `LOW` (raise to `MEDIUM` only if T5.9 shows quality problems). Persist an `AiDraft` with `promptVersion`. `POST /api/admin/tickets/[id]/drafts` (admin only, authz matrix). Admin detail returns the latest draft with a `stale` flag (a newer message exists).
+- **Acceptance:** fake-provider tests: stored and returned; `[AUTHOR_FIRST_NAME]` replaced; failure → 503 `AI_UNAVAILABLE` with nothing stored; prompt tests: the category's KB section is present, others absent, no notes or personal data; an author gets 403.
+- **Verify:** `npm test`. Manual check with the real key on 3 categories (subject to the owner's data decision; otherwise on a synthetic ticket).
 
 ### T5.7 Draft safety post-check
 - **Reqs:** DRAFT-05
 - **Prereqs:** T5.6
-- **Scope:** `server/ai/safety.ts` `checkDraft(reply, context)` returns `warnings[]`. It covers ₹ amounts or numbers not present in the context and a small list of completed-action patterns. Warnings are stored on `AiDraft`.
-- **Acceptance:** unit tests show that "₹5,000 has been credited" with no such fact produces 2 warnings, and that a clean draft produces none.
+- **Scope:** `server/ai/safety.ts` `checkDraft(reply, context)` → `warnings[]`, stored on `AiDraft`, shown above the editor, never blocking. Proportionate: everything is checked against the **supplied context** (KB sections, verified facts, ticket text), so legitimate figures such as "48 hours", "₹1,000" or the book's own amounts pass. It flags: ₹ amounts, other numbers and durations not in the context; links, email addresses and phone numbers not in the context; and completed-action phrasing ("has been refunded", "we have reprinted", "has been escalated").
+- **Acceptance:** unit tests: "₹5,000 has been credited" without that fact → 2 warnings; a draft quoting the context's figures and timelines → none; an unknown URL or email → a warning; the KB's own figures → none.
 - **Verify:** `npm test`.
 
 ### T5.8 Admin draft UI
 - **Reqs:** DRAFT-01, DRAFT-02, DRAFT-05, DRAFT-08
 - **Prereqs:** T5.6, T5.7, T4.8
-- **Scope:** on opening a ticket with no draft (or a stale one), the client POSTs a draft request once and shows a "Drafting…" state. The draft fills the composer for editing. Commitments are shown as a confirm checklist, and needs-verification items and warnings are listed above the editor. A "Regenerate" button. On failure, a banner says "AI draft unavailable — write a reply manually". Sending passes `aiDraftId`. Add a "Retry classification" button for triage tickets.
+- **Scope:** opening a ticket with no draft (or a stale one) requests one draft once and shows "Drafting…". The draft fills the composer for editing. Commitments, needs-verification items and warnings are listed above the editor (informational; no confirmation gate). "Regenerate" button. Failure banner: "AI draft unavailable — write a reply manually", with a "try again in a minute" note on rate limits. Sending passes `aiDraftId`. "Retry classification" for triage tickets.
 - **Acceptance:** manual check with a real key and with AI disabled.
 - **Verify:** manual check.
 
 ### T5.9 Live prompt evaluation script
-- **Reqs:** AI-02, DRAFT-06 (evidence for the README)
+- **Reqs:** AI-02, DRAFT-04–06 (evidence for the README)
 - **Prereqs:** T5.3, T5.6
-- **Scope:** `scripts/ai-eval.ts` (manual, paid, not in CI) runs our own paraphrased test queries through classification, and optionally through drafting against chosen seeded books. There are at least 9: at least one per category, plus a missing-royalty versus profile-update priority pair. The brief's sample queries are not copied. It prints expected and actual results. Summarise the results in the README.
-- **Acceptance:** at least 7 of 9 categories match. The long-missing-royalty query ranks above the profile-update query. No draft states a completed action. Mismatches are analysed and the prompt adjusted, or the reason documented.
-- **Verify:** run once and save a summary to `docs/ai-eval.md`.
+- **Scope:** `scripts/ai-eval.ts` (manual, uses the real API, not in CI). Synthetic tickets and synthetic book facts only (no dataset records, no brief text copied). About 10 cases: at least one per category, both royalty variants (missing payment; amount looks low), and the missing-royalty vs bio-update pair. Checks, each traced to the brief:
+  - **Classification:** exact category for every case. Priority is pass/fail only where the brief supports it: the long-missing royalty ranks above the bio update; an ISBN error is High or above. Other priorities are reported against our rubric, not scored.
+  - **Drafts (automatic):** no completed-action phrasing; no safety warnings; and per category: royalty (missing) mentions the quarterly cycle, the 45-day window and the computed payout date, and puts bank details and payout status in `needsVerification` (48 hours only if conditional on confirmation); royalty (amount) explains the net-profit formula and offers a breakdown; ISBN commits to escalating to production with a 48-hour timeline; printing asks for photos and commits to a free reprint after verification within 5–7 business days; distribution (published book) commits to a re-sync with 24–48 hours; production states the actual stage and does **not** invent a completion date (the brief's "specific updated timeline" has no data source, so it goes to `needsVerification`); general metadata says 3–5 business days.
+  - Tone is reviewed manually.
+- **Acceptance:** every category exact, both ordering checks pass, all automatic draft checks pass; any failure is analysed and the prompt adjusted, or the reason documented. About 16–20 API calls per run.
+- **Verify:** run once; save a summary to `docs/ai-eval.md` (case IDs, expected vs actual, pass/fail, tokens; no prompt or dataset text).
 
 ---
 

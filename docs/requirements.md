@@ -79,7 +79,7 @@ The source of truth is the product brief (PDF) and `bookleaf_sample_data.json`. 
 | AI-05 | Structured JSON output is validated server-side before it is used. | Derived | D | Malformed output is logged as `INVALID_OUTPUT` and nothing is persisted. | — |
 | AI-06 | Admin overrides are never overwritten by AI, whether from a late classification or a retry. | Derived | B | Tested. | — |
 | AI-07 | Classification failure (timeout, rate limit, provider error, missing key) leaves the ticket usable: it is unclassified, the admin can set values manually, and retry is available. | Mandatory | D | Fake-provider tests cover timeout, 429 and malformed output. | — |
-| AI-08 | Cost-aware classification: one call returns both category and priority, uses a small model and truncated input, and runs once per ticket unless an admin retries. | Mandatory | D | Token usage is recorded per call. One provider call per ticket creation. | — |
+| AI-08 | Cost-aware classification: one call returns both category and priority, uses a small model and truncated input, and runs once per ticket unless an admin retries. | Mandatory | D | Token usage (input, output and thinking, separately) is recorded per call. One provider call per ticket creation. | — |
 | AI-09 | The API key is read only from a server-side environment variable. It is never hard-coded, sent to the client, logged or committed. | Mandatory | D | Repository and client bundle grep is clean. AI modules import `server-only`. | — |
 
 ## 6. AI-drafted responses and admin review (DRAFT)
@@ -92,7 +92,7 @@ The source of truth is the product brief (PDF) and `bookleaf_sample_data.json`. 
 | DRAFT-04 | Drafts are grounded only in verified application data (the ticket, the author's own book records, and code-derived policy facts) and the runtime KB module. No invented numbers, dates, platforms or policies. | Mandatory | KB, D | The prompt contains only allow-listed facts. Prompt-construction tests check this. | `books[]`, KB |
 | DRAFT-05 | Drafts never claim that an action (escalation, re-sync, reprint, refund, payment, …) **has already happened** unless the application has a record that it was performed. The app currently records no such actions, so drafts may only commit to future actions. Those commitments are listed separately for the admin to confirm. | Mandatory | Brief | Structured output has `commitments[]` and `needsVerification[]`. A deterministic check flags completed-action phrasing and amounts that are not in the context. | — |
 | DRAFT-06 | Tone follows the KB communication guidelines (§14). | Mandatory | KB, D | The system prompt encodes the guidelines. Evaluation drafts are reviewed manually. | KB |
-| DRAFT-07 | Token-aware context: only the KB sections relevant to the category, only the referenced book (or a compact summary for General), truncated text and recent replies, no internal notes, and no PII beyond the author's first name. Drafts are cached and regenerated only on request. | Mandatory | D | Context-builder tests check which sections are included and the size bounds. Token usage is recorded. | — |
+| DRAFT-07 | Token-aware context: only the KB sections relevant to the category, only the referenced book (or a compact summary for General), truncated and redacted text and recent replies, no internal notes, and no personal data: the author's name is substituted after generation, and emails, phone numbers and long digit runs in ticket text are redacted (architecture §6.6). Drafts are cached and regenerated only on request. | Mandatory | D | Context-builder tests check which sections are included and the size bounds. Token usage is recorded. | — |
 | DRAFT-08 | When AI fails, the admin sees "draft unavailable" and can reply manually. | Mandatory | D | A failing provider produces 503 `AI_UNAVAILABLE`, and the composer still sends. | — |
 | DRAFT-09 | Ticket text is treated as untrusted data (prompt-injection resistance). | Derived | Brief | User content is delimited in the prompt. Output is schema-bound. No tool calling. | — |
 
@@ -235,6 +235,8 @@ This is a concise structured summary, not a copy of the brief. At runtime it liv
 | Is the threshold per author or per book? | Per author ("accumulated royalties"). Used only for hints and context. |
 | The KB mentions dashboard features this portal lacks (bank linking, per-platform breakdown, metadata edits). | Drafts may describe BookLeaf's processes but must not claim that data exists in this portal. |
 | Priority rubric: only examples are given. | A recommended rubric is in architecture §6.3, calibrated with our own query set. |
+| The brief's 48-hour timeline appears as a tone example, in the ISBN sample, and for royalty only "if the payment is genuinely overdue". | Drafts use 48 hours for ISBN escalations and investigations; for royalty only conditionally, because the app can't confirm a payment is overdue (payout status goes to `needsVerification`). |
+| The production sample asks for "a specific updated timeline", but no data gives stage durations or dates. | Drafts state the actual stage from `status` and never invent a date; the timeline goes to `needsVerification` for the admin. |
 | No admin users or passwords in the data. | The seed creates two admin accounts. Demo passwords come from env. Credentials are listed in the README. |
 
 ## 15. Deliverables and confidentiality

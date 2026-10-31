@@ -1,6 +1,6 @@
 # 0003. AI integration: provider boundary, structured outputs, graceful degradation
 
-- **Status:** Accepted (owner, 2026-10-30). The exact Gemini model IDs are still open and will be confirmed in T5.1.
+- **Status:** Accepted (owner, 2026-10-30). Model IDs set by the owner on 2026-10-31 (see History).
 - **Date:** 2026-10-27
 - **Implementation:** partial. Only the persistence side exists: the `AiDraft` and `AiCallLog` tables, and the AI fields on `Ticket` (T1.5). `GEMINI_*` variables are defined in `src/server/env.ts`. No provider, prompt, KB module or classification code yet (Phase 5).
 - **Requirements:** AI-01–09, DRAFT-01–09, TICKET-05, MGMT-04
@@ -44,3 +44,4 @@ AI quality is central to the product: prompt design, Knowledge Base usage, class
 ## History
 - **2026-10-30:** the KB-size wording was changed from a token estimate to "a handful of short sections", because the KB module is not built yet. The KB module, now a structured summary rather than a verbatim copy of the brief, and the rule against claiming completed actions were refined on the owner's instruction before acceptance.
 - **2026-10-31:** added the **Implementation** and **Rationale** sections (documentation-format update). The decision is unchanged. The rationale was drawn from the owner's recorded instructions and the existing text.
+- **2026-10-31 (Phase 5 review, owner-approved):** implementation details confirmed against current docs and `@google/genai` 2.32.0; the decision is unchanged. Models: `gemini-3.5-flash-lite` for both tasks (classification thinking `MINIMAL`, drafting `LOW`), configured in env; drafting moved off `gemini-3.8-flash` during T5.1 because of free-tier 503s and 20–65 s latency. Temperature stays at the default, per Google's Gemini 3 guidance. Gemini strips JSON Schema keywords it doesn't enforce, so Zod remains the enforcement point. `AiCallLog` gains `thinkingTokens` and `promptVersion`. Prompts are minimised further because of the unpaid-tier data terms (architecture §6.6).
