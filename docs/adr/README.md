@@ -46,7 +46,7 @@ Optional. Dated factual corrections, or how the decision evolved.
 | ADR | Title | Status | Implementation |
 |---|---|---|---|
 | [0001](0001-single-nextjs-app-with-rest-route-handlers.md) | Single Next.js app with REST Route Handlers | Accepted | Partial |
-| [0002](0002-jwt-cookie-auth.md) | Email/password auth with a signed JWT in an HttpOnly cookie | Accepted | Partial (password hashing) |
+| [0002](0002-jwt-cookie-auth.md) | Email/password auth with a signed JWT in an HttpOnly cookie | Accepted | Partial (hashing, JWT, cookie) |
 | [0003](0003-ai-integration-structured-outputs-graceful-degradation.md) | AI integration: provider boundary, structured outputs, graceful degradation | Accepted (model IDs open) | Partial (schema tables only) |
 | [0004](0004-polling-for-near-real-time-updates.md) | Polling for near-real-time ticket updates | Accepted | Not started |
 | [0005](0005-dataset-preserving-data-model.md) | Dataset-preserving data model | Accepted (retrospective) | Implemented |

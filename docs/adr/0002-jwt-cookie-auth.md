@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (decided by the project owner, 2026-10-30; replaces the earlier *proposed* database-session design, which was never accepted)
 - **Date:** 2026-10-30
-- **Implementation:** partial. Password hashing (`src/server/auth/password.ts`, `bcryptjs`, cost 12) and the seeded login accounts are done (T2.2). JWT, cookies and guards are still to come (T2.3–T2.7).
+- **Implementation:** partial. Done: password hashing (`src/server/auth/password.ts`, T2.2); token signing and verification (`jwt.ts`, `jose`, T2.3); session cookie helpers (`cookie.ts`, T2.3). Still to come: guards, login and logout routes, and pages (T2.4–T2.7).
 - **Requirements:** AUTH-01–08, API-05
 
 ## Context

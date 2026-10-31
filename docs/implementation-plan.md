@@ -18,7 +18,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T1.8 | Neon development database | T1.7 | done |
 | T2.1 | HTTP foundation: errors, `withApi`, validation | T1.3 | done |
 | T2.2 | Password hashing and user seeding | T1.7 | done |
-| T2.3 | JWT sign/verify and cookie helpers | T1.3 | todo |
+| T2.3 | JWT sign/verify and cookie helpers | T1.3 | done |
 | T2.4 | Auth guards (API and pages) | T2.1, T2.3 | todo |
 | T2.5 | Login, logout, me endpoints | T2.2, T2.4 | todo |
 | T2.6 | Login page, proxy, portal shells | T2.5 | todo |
@@ -258,6 +258,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
   - `AUTH_JWT_SECRET` comes from `server/env.ts`.
 - **Acceptance:** unit tests reject each of these: a tampered signature, a token signed with another secret, `alg: none` or another algorithm, an expired token, a wrong issuer or audience, an invalid role, and an AUTHOR without `authorId`. A valid token round-trips. Cookie flags are asserted for both production and development.
 - **Verify:** `npm test`, with the clock mocked for the expiry test.
+- **Outcome (2026-10-31):**
+  - `src/server/auth/jwt.ts` and `cookie.ts` (`jose` ^6.2.14), with 20 new tests; suite 118/118.
+  - Also rejects tokens missing `exp`, `iat` or `sub`. A missing `AUTH_JWT_SECRET` throws (loud), rather than returning null.
+  - The cookie helpers append `Set-Cookie`, so they work on any `Response`.
+  - Prerequisite for T2.5: the owner adds `AUTH_JWT_SECRET` to `.env`.
 
 ### T2.4 Auth guards
 - **Reqs:** AUTH-04, AUTH-05, AUTH-07
