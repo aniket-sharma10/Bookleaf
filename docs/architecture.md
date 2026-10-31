@@ -124,7 +124,9 @@ Design rules (rationale in **ADR-0005**):
 - Success responses: `200` returns `{ data }` (lists: `{ data, page, pageSize, total }`). Create returns `201 { data }`.
 - Error responses: `{ error: { code, message, details? } }`. Codes: `VALIDATION_ERROR` 400, `UNAUTHENTICATED` 401, `FORBIDDEN` 403, `NOT_FOUND` 404, `CONFLICT` 409, `AI_UNAVAILABLE` 503, `INTERNAL_ERROR` 500 (message is generic; details are logged server-side only).
 - In route handlers, `params` is a Promise in Next 15+ and must be awaited.
-- Mutating methods require `Content-Type: application/json` and a same-origin `Origin` header (API-05).
+- **CSRF (API-05):** `withApi` refuses POST/PUT/PATCH/DELETE whose `Origin` header names a different origin (403). Requests without an `Origin` header, such as curl or server-to-server calls, are allowed; browsers always send one on cross-site mutations, and the `SameSite=Lax` cookie is the primary defence.
+- **Request bodies:** `parseJson` requires `Content-Type: application/json`, so plain cross-site HTML forms can't submit.
+- **Error mapping:** `errorResponse` maps Zod errors to 400 with `details: [{ path, message }]`, Prisma P2025 to 404 and P2002 to 409, and anything else to a logged generic 500 (`src/server/http/`).
 
 | Method | Path | Role | Purpose | Notes |
 |---|---|---|---|---|
@@ -168,7 +170,7 @@ The approach is **email/password login, with a signed JWT in an HttpOnly cookie*
   2. Portal `layout.tsx` calls `requireUser(role)` and redirects. This is a UX gate.
   3. `withApi({ role })` in every route handler is the **actual boundary**. It verifies the token, then checks the role. It returns 401 `UNAUTHENTICATED` or 403 `FORBIDDEN`.
   4. Services scope author data by `ctx.user.authorId`, which comes from the verified token and never from client input.
-- **CSRF:** `SameSite=Lax`, plus a same-origin `Origin` check on POST/PATCH/DELETE in `withApi`.
+- **CSRF:** `SameSite=Lax`, plus the `Origin` check on mutations in `withApi` (see §4).
 - **Login abuse:** no rate limiting in scope. This is a documented limitation.
 
 ## 6. AI integration

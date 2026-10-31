@@ -16,7 +16,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T1.6 | Seed exact dataset (authors, books) | T1.5 | done |
 | T1.7 | Guarded test-DB harness and seed verification | T1.6 | done |
 | T1.8 | Neon development database | T1.7 | done |
-| T2.1 | HTTP foundation: errors, `withApi`, validation | T1.3 | todo |
+| T2.1 | HTTP foundation: errors, `withApi`, validation | T1.3 | done |
 | T2.2 | Password hashing and user seeding | T1.7 | todo |
 | T2.3 | JWT sign/verify and cookie helpers | T1.3 | todo |
 | T2.4 | Auth guards (API and pages) | T2.1, T2.3 | todo |
@@ -229,6 +229,13 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `src/server/http/`: `ApiError` subclasses, `errorResponse()`, `withApi(handler, { role? })`, `parseJson(req, schema)`, `parseQuery(url, schema)`, origin and content-type checks for mutations, and a mapping for Zod errors (to 400 with field details), Prisma not-found (to 404) and unknown errors (to a logged 500 with a generic message). The role option is a stub until T2.4.
 - **Acceptance:** unit tests cover each mapping and the cross-origin POST → 403.
 - **Verify:** `npm test`.
+- **Outcome (2026-10-31):**
+  - `src/server/http/` contains `errors.ts`, `request.ts` and `handler.ts`, with 26 unit tests. A temporary route also checked the wrapper under `next build` and `next start`.
+  - Also maps Prisma P2002 to 409 (the API contract lists 409).
+  - Deviations:
+    - No `role` stub. The option arrives with real enforcement in T2.4.
+    - The JSON content type is enforced in `parseJson`, not on every mutation, so body-less POSTs such as logout work.
+    - Mutations without an `Origin` header are allowed.
 
 ### T2.2 Password hashing and user seeding
 - **Reqs:** AUTH-01, AUTH-02, AUTH-08, DEL-04
