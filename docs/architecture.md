@@ -263,14 +263,14 @@ Polling pauses while the tab is hidden (SWR default) and revalidates on focus. E
 | `DEV_DATABASE_HOST` | guards (`prisma/db-target.ts`) | with Neon | The `DIRECT_URL` host. Registers it as the development database (ADR-0008). Not a secret, but kept in `.env`. |
 | `GEMINI_API_KEY` | server/ai | no | Unset means AI is disabled and graceful mode is used |
 | `GEMINI_CLASSIFY_MODEL`, `GEMINI_DRAFT_MODEL` | server/ai | no | Defaults are set in code after verifying current model IDs |
-| `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` | seed only | for seeding | Demo credentials are documented in the README |
+| `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` | seed only | for seeding | Demo login passwords (8+ characters), documented in the README. Accounts: one AUTHOR per dataset author, plus `support.lead@` and `support.agent@bookleaf.example` (ADMIN). |
 | `SEED_DATA_PATH` | seed, `db:verify` | no | Default `./bookleaf_sample_data.json` |
 | `PRISMA_ALLOW_REMOTE_DATABASE` | `prisma.config.ts` | no | `true` lets a Prisma CLI command reach a non-local database (ADR-0008). Set per command, or in the hosting provider's build environment. Never in `.env`. |
 
 **Environment access** (rationale in **ADR-0007**):
 - App code reads configuration only through `server/env.ts`: `getEnv()` and `requireEnv(name)`. That file is server-only.
 - All variables are optional but validated if set. Nothing uses a `NEXT_PUBLIC_` prefix.
-- The CLI entry points `prisma.config.ts`, `prisma/seed.ts` and `prisma/verify.ts` cannot import server-only modules. They load `.env` with `process.loadEnvFile()` and read `process.env` directly.
+- The CLI entry points `prisma.config.ts`, `prisma/seed.ts` and `prisma/verify.ts` load `.env` with `process.loadEnvFile()` and read `process.env` directly. Seed and verify run under `tsx --conditions=react-server`, so they can import server-only modules such as `src/server/auth/password.ts`.
 - Migrations, the seed and `db:verify` use `DIRECT_URL || DATABASE_URL`. The app's runtime client (`getDb()`) always uses `DATABASE_URL`.
 
 **Local databases (Docker Compose).** Rationale and the guards are in **ADR-0006**. The compose file sets `name: bookleaf`, so every resource is namespaced and cannot collide with other projects' Postgres containers or volumes on the same machine. It uses the stock `postgres:16-alpine` image; there is no custom image to build.

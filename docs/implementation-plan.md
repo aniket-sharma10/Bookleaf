@@ -17,7 +17,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T1.7 | Guarded test-DB harness and seed verification | T1.6 | done |
 | T1.8 | Neon development database | T1.7 | done |
 | T2.1 | HTTP foundation: errors, `withApi`, validation | T1.3 | done |
-| T2.2 | Password hashing and user seeding | T1.7 | todo |
+| T2.2 | Password hashing and user seeding | T1.7 | done |
 | T2.3 | JWT sign/verify and cookie helpers | T1.3 | todo |
 | T2.4 | Auth guards (API and pages) | T2.1, T2.3 | todo |
 | T2.5 | Login, logout, me endpoints | T2.2, T2.4 | todo |
@@ -243,6 +243,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `server/auth/password.ts` (`bcryptjs`, cost 12, `hash` and `verify`). Extend the seed: one AUTHOR user per dataset author (email copied from the dataset, linked by `authorId`, password from `SEED_AUTHOR_PASSWORD`), plus two ADMIN users with documented `@bookleaf.example` emails (password from `SEED_ADMIN_PASSWORD`). Re-running the seed does not change existing hashes unless `--reset-passwords` is passed.
 - **Acceptance:** 12 users exist, the CHECK constraint holds, and no plaintext is stored. `verifySeed` also checks the user↔author links.
 - **Verify:** unit test for password functions. The seed verification test passes.
+- **Outcome (2026-10-31):**
+  - Added `src/server/auth/password.ts` and `prisma/users.ts` (`seedUsers`, `verifyUsers`, `readSeedPasswords`). Admins are `support.lead@` and `support.agent@bookleaf.example`. Reset passwords with `npx prisma db seed -- --reset-passwords`.
+  - Seed and verify now run under `tsx --conditions=react-server`, so they share the app's server-only password module instead of duplicating it.
+  - Neon: 12 logins seeded and `db:verify` passes. A re-run set 0 passwords, so existing hashes were kept.
+  - Tests: 98/98 (7 new: password unit tests, plus user-seeding DB tests with synthetic data).
 
 ### T2.3 JWT sign/verify and cookie helpers
 - **Reqs:** AUTH-03, AUTH-04, AUTH-08

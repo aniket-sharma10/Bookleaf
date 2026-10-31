@@ -35,7 +35,7 @@ This file is the central source of project rules. Skills in `.claude/skills/` de
 - Author-scoped code takes `authorId` from the verified token, never from the URL, query or body. Every author query filters by it. Another author's record returns 404.
 - Author responses use explicit `select` DTOs and never include internal notes, drafts, priority, AI fields or assignee.
 - **Secrets** are read only from `src/server/env.ts`.
-  - The exceptions are CLI entry points that can't import server-only code (`prisma.config.ts`, `prisma/seed.ts`, `prisma/verify.ts`); they read `process.env` directly (ADR-0007).
+  - The exceptions are the CLI entry points (`prisma.config.ts`, `prisma/seed.ts`, `prisma/verify.ts`), which read `process.env` directly (ADR-0007).
   - Never use a `NEXT_PUBLIC_` secret and never log keys.
   - Never commit `.env*`. Only the templates `.env.example` and `.env.test.example` are committed.
 - Seed data must match the supplied JSON exactly. Never invent, "fix" or drop dataset records or fields. ISBNs are masked placeholders, so store them verbatim.

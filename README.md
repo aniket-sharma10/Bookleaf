@@ -2,6 +2,15 @@
 
 Work in progress. The full README (setup, credentials, architecture, AI integration, API docs) arrives in task T7.5. See `docs/` for requirements, architecture and the implementation plan.
 
+## Demo accounts
+
+| Role | Email | Password |
+|---|---|---|
+| Author | any author's email from the dataset (e.g. the first author listed) | `Author@Demo2026` |
+| Admin | `support.lead@bookleaf.example` or `support.agent@bookleaf.example` | `Admin@Demo2026` |
+
+The seed reads these passwords from `SEED_AUTHOR_PASSWORD` / `SEED_ADMIN_PASSWORD`; they are demo values, not secrets.
+
 ## Development (current state)
 
 - Node.js 24 LTS (`.nvmrc`; Prisma 7 needs Node ≥ 20.19)
@@ -16,8 +25,8 @@ cp .env.example .env    # then fill in the Neon values; never commit .env
 npm install             # also runs `prisma generate` (postinstall)
 npm run db:up           # start the local Docker databases (the test DB is needed by npm test)
 npx prisma migrate deploy   # apply migrations to the dev database (Neon)
-npm run db:seed             # load the supplied authors/books (needs bookleaf_sample_data.json in the project root, or SEED_DATA_PATH)
-npm run db:verify           # read-only: confirm the dev database matches the dataset field by field
+npm run db:seed             # load the supplied authors/books and the login accounts (needs bookleaf_sample_data.json, or SEED_DATA_PATH)
+npm run db:verify           # read-only: confirm the dev database matches the dataset field by field, plus the logins
 npm run dev        # http://localhost:3000
 npm run lint       # ESLint (eslint-config-next)
 npm run typecheck  # next typegen + tsc --noEmit (strict)

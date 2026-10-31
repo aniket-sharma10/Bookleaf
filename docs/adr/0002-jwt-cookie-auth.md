@@ -2,7 +2,7 @@
 
 - **Status:** Accepted (decided by the project owner, 2026-10-30; replaces the earlier *proposed* database-session design, which was never accepted)
 - **Date:** 2026-10-30
-- **Implementation:** not started (T2.1–T2.7). `AUTH_JWT_SECRET` is already defined in `src/server/env.ts`; `bcryptjs` and `jose` are not installed yet.
+- **Implementation:** partial. Password hashing (`src/server/auth/password.ts`, `bcryptjs`, cost 12) and the seeded login accounts are done (T2.2). JWT, cookies and guards are still to come (T2.3–T2.7).
 - **Requirements:** AUTH-01–08, API-05
 
 ## Context

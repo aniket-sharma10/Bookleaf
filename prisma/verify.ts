@@ -11,6 +11,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { describeCliError } from "./cli-errors";
 import { DEFAULT_DATASET_PATH, parseDataset, readDatasetFile } from "./dataset";
 import { assertLocalDevDatabase } from "./db-target";
+import { verifyUsers } from "./users";
 import { verifyDataset } from "./verify-dataset";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
@@ -28,10 +29,11 @@ async function main(): Promise<void> {
     adapter: new PrismaPg({ connectionString: databaseUrl }),
   });
   try {
-    const { authors, books, problems } = await verifyDataset(db, dataset);
+    const result = await verifyDataset(db, dataset);
+    const problems = [...result.problems, ...(await verifyUsers(db, dataset))];
     if (problems.length === 0) {
       console.log(
-        `Verified ${authors} authors and ${books} books: the database matches the dataset exactly.`,
+        `Verified ${result.authors} authors and ${result.books} books (exact match) and their login accounts.`,
       );
       return;
     }

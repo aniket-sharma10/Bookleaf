@@ -35,7 +35,9 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
     // Runs only via `prisma db seed` (Prisma 7 never seeds automatically).
-    seed: "tsx prisma/seed.ts",
+    // The react-server condition lets the script import server-only modules
+    // (e.g. password hashing) the same way Next.js server code does.
+    seed: "tsx --conditions=react-server prisma/seed.ts",
   },
   datasource: { url },
 });

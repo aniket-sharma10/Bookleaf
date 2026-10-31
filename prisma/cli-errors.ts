@@ -1,6 +1,7 @@
 import { Prisma } from "../src/generated/prisma/client";
 import { DatasetError } from "./dataset";
 import { DatabaseTargetError } from "./db-target";
+import { SeedConfigError } from "./users";
 
 /**
  * One-line, safe description of a failure in the seed or verify scripts.
@@ -13,7 +14,11 @@ export function describeCliError(
   afterQueryFailure = "",
 ): string {
   const suffix = afterQueryFailure ? ` ${afterQueryFailure}` : "";
-  if (error instanceof DatabaseTargetError || error instanceof DatasetError) {
+  if (
+    error instanceof DatabaseTargetError ||
+    error instanceof DatasetError ||
+    error instanceof SeedConfigError
+  ) {
     return error.message;
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {

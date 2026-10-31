@@ -19,11 +19,12 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:seed": "prisma db seed",
-    "db:verify": "tsx prisma/verify.ts"
+    "db:verify": "tsx --conditions=react-server prisma/verify.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "bcryptjs": "^3.0.3",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
