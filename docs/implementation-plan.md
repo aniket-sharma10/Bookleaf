@@ -28,7 +28,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T3.3 | Author dashboard and My Books UI | T2.6, T3.2 | todo |
 | T3.4 | Ticket creation API | T2.4, T3.1 | done |
 | T3.5 | Author ticket read APIs | T3.4 | done |
-| T3.6 | New-ticket form UI | T2.6, T3.2, T3.4 | todo |
+| T3.6 | New-ticket form UI | T2.6, T3.2, T3.4 | done |
 | T3.7 | My Tickets list and detail UI | T3.5, T2.6 | done |
 | T4.1 | Admin queue API with filters and sort | T3.4 | todo |
 | T4.2 | Admin ticket detail API | T4.1 | todo |
@@ -383,6 +383,9 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `/author/tickets/new`. Book select (own books plus "General / Account Level", with in-production books labelled), subject, description with a character count, and an attachment picker that lists file names with the notice "Attachments aren't uploaded in this version". Client validation uses the shared schema, server field errors are mapped onto fields, the submit button is disabled while pending, and success redirects to the ticket detail.
 - **Acceptance:** the form submits, and validation errors appear inline.
 - **Verify:** manual check, including a forced 400 from the server.
+- **Outcome (2026-10-31):**
+  - `features/author-tickets/new-ticket-form.tsx` and `/author/tickets/new`. No book is preselected, so "General / Account Level" is a deliberate choice; all field errors show together; on success the ticket list cache is refreshed and the browser goes to the new ticket.
+  - Browser check (local Docker dev DB, AUTH007): book list with the in-production book labelled; empty submit shows three inline errors and focuses the first; a forced server 400 (option value changed to another author's book) shows the server's message on the book field; a real submission with an attachment listed lands on the ticket and appears in My tickets; phone width.
 
 ### T3.7 My Tickets list and detail UI
 - **Reqs:** TICKET-06, TICKET-07

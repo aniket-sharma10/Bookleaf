@@ -25,3 +25,12 @@ Last run: 2026-10-31 (T2.6), local dev server against the dev database, Chrome, 
 - [x] A ticket without replies says "No replies yet…".
 - [x] An unknown ticket ID, or another author's ticket ID, shows "We couldn't find that ticket".
 - [x] Lists and tickets read well at phone width.
+
+## Raise a query (TICKET-01, TICKET-02, TICKET-04)
+
+- [x] The book list shows the author's books (in-production ones labelled "(in production)") plus "General / Account Level"; nothing is preselected.
+- [x] Submitting an empty form shows all field errors at once and focuses the first.
+- [x] A server-side 400 (another author's book ID, forced by editing the option in DevTools) appears on the book field.
+- [x] Subject and details show live character counts.
+- [x] Chosen attachment names are listed, with the note that attachments aren't uploaded.
+- [x] A valid submission opens the new ticket (Open, no replies), and it appears in My tickets.
