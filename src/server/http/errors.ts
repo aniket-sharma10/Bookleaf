@@ -10,6 +10,7 @@ export type ErrorCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "RATE_LIMITED"
   | "AI_UNAVAILABLE"
   | "INTERNAL_ERROR";
 
@@ -56,6 +57,16 @@ export class ConflictError extends ApiError {
   }
 }
 
+/** Too many requests for one rate-limit rule; retry after the window ends. */
+export class RateLimitedError extends ApiError {
+  constructor(
+    message: string,
+    readonly retryAfterSeconds: number,
+  ) {
+    super(429, "RATE_LIMITED", message);
+  }
+}
+
 export class AiUnavailableError extends ApiError {
   constructor(
     message = "The AI service is unavailable. Please try again or continue manually.",
@@ -87,6 +98,11 @@ function errorJson(
  * the server and returned as a generic 500, so internals never reach clients.
  */
 export function errorResponse(error: unknown): Response {
+  if (error instanceof RateLimitedError) {
+    const response = errorJson(error.status, error.code, error.message);
+    response.headers.set("Retry-After", String(error.retryAfterSeconds));
+    return response;
+  }
   if (error instanceof ApiError) {
     return errorJson(error.status, error.code, error.message, error.details);
   }

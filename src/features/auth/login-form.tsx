@@ -35,6 +35,10 @@ function toFormError(error: unknown): FormError {
       message: "That email and password don't match. Check them and try again.",
     };
   }
+  if (error instanceof ApiClientError && error.status === 429) {
+    // The server's message says how long to wait.
+    return { title: "Too many attempts", message: error.message };
+  }
   if (error instanceof ApiClientError && error.code === "NETWORK_ERROR") {
     return { title: "Connection problem", message: error.message };
   }

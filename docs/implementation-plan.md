@@ -53,10 +53,11 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T7.1 | Full quality gate | T6.3 | done |
 | T7.2 | Security review | T7.1 | done |
 | T7.3 | Manual end-to-end checklist | T7.1 | todo |
-| T7.4 | Production deployment and seed | T7.2, T7.3 | todo |
+| T7.4 | Production deployment and seed | T7.2, T7.3, T7.8 | todo |
 | T7.5 | README and API documentation | T7.4 | todo |
 | T7.6 | One-page write-up | T7.5 | todo |
 | T7.7 | Handover | T7.6 | todo |
+| T7.8 | Basic rate limiting | T7.2 | done |
 
 Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T1.3. T3.1, T5.1 and T5.2 do not depend on the UI, and can be pulled forward if a session has spare time.
 
@@ -695,7 +696,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Outcome:**
   - Reviewed against the full `review-security` checklist: no Critical, High or Medium findings.
   - Fixed (Low, defence in depth): nothing refused framing. Today the `SameSite=Lax` cookie isn't sent inside a cross-site iframe, so a framed portal page shows the login screen; the protection shouldn't rest on the cookie setting alone. `next.config.ts` now sends `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff` and a referrer policy (architecture §5). Regression test `tests/security-headers.test.ts`; the headers were also confirmed on `next start` responses.
-  - Accepted and documented: no login or AI-draft rate limiting (§5), and logout doesn't revoke a token before it expires (ADR-0002). The demo credentials are public, so anyone can sign in to the live demo as an admin and use the free Gemini quota; when it runs out, AI degrades to manual (DRAFT-08). Both go in the README's known limitations (T7.5).
+  - Accepted and documented: logout doesn't revoke a token before it expires (ADR-0002); reassessed in T7.8 and kept. No rate limiting at review time; the owner then asked for it (T7.8).
   - Secret scan: `git grep` for key patterns finds only placeholders and local Docker credentials. The real `.env` values (Gemini key, JWT secret, Neon host and password) appear nowhere in the tree or in history. The built `.next/static` bundle has no key, env name, DB URL or server-only code.
 
 ### T7.3 Manual end-to-end checklist
@@ -706,7 +707,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 
 ### T7.4 Production deployment and seed
 - **Reqs:** DEL-03, DEL-04
-- **Prereqs:** T7.2, T7.3
+- **Prereqs:** T7.2, T7.3, T7.8
 - **Scope:** set production env vars, `migrate deploy`, seed from local, run `db:verify` against production, then re-run the T7.3 checklist on the live URL. Note the AI quota.
   - Moved here from the original T1.8:
     - Use a separate Neon project for production, never the dev one.
@@ -730,6 +731,17 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Reqs:** DEL-01, DEL-02
 - **Prereqs:** T7.6
 - **Scope:** confirm that no confidential files or verbatim brief text are committed (the repo is public), grant BookLeaf collaborator access (address pending), review the commit history, and check that the README live URL works from an incognito window.
+
+### T7.8 Basic rate limiting
+- **Reqs:** none directly (security baseline next to AUTH-01 and API-05; protects the AI quota behind AI-08)
+- **Prereqs:** T7.2
+- **Scope:** added at the owner's request after T7.2. Proportionate limits on sign-in, ticket creation and AI calls, with no new infrastructure (ADR-0009). Reassess logout token revocation.
+- **Verify:** limits return 429 with `Retry-After`; parallel requests can't exceed a limit; successful and invalid sign-ins aren't counted.
+- **Outcome:**
+  - `RateLimit` table and migration; `consumeRateLimit` / `refundRateLimit` / `clientIp` in `src/server/http/rate-limit.ts`; wired into four routes (architecture §5 has the limits). The login form shows the 429 message.
+  - `tests/integration/rate-limit.test.ts` (10 tests), including a parallel-burst test that allows exactly the limit. A mutation check (removing the sign-in refund) made the matching test fail.
+  - Revocation reassessed and kept as is (ADR-0002): HttpOnly already blocks token theft by script, and the obvious fix (a per-user `tokenVersion`) would sign out every reviewer sharing a demo account on any one logout.
+  - Applied to the Neon dev DB (`migrate deploy`). Checked live on `next start` with a test IP: 10 × 401, then 429 with `Retry-After` and the message, which the login form shows as "Too many attempts"; another IP is unaffected. Production gets the migration in T7.4.
 
 ---
 

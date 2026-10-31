@@ -105,6 +105,7 @@ Prisma models (PostgreSQL). Money is stored as `Int` (whole rupees, exactly as s
 | **TicketMessage** | `id`, `ticketId`, `senderId`, `body`, `aiDraftId?`, `createdAt` | Author-visible thread. FK cascade on ticket. Index `(ticketId, createdAt)` |
 | **InternalNote** | `id`, `ticketId`, `createdById`, `body`, `createdAt` | **Separate table** so author queries cannot leak notes by accident. Index `ticketId` |
 | **AiDraft** | `id`, `ticketId`, `body`, `commitments Json`, `needsVerification Json`, `warnings Json`, `model`, `promptVersion`, `createdById`, `createdAt` | Index `(ticketId, createdAt)`. The latest row is the "current" draft. It is stale if a newer message exists. |
+| **RateLimit** | `key` (rule name plus subject, e.g. `login:<ip>`, `ai:<userId>`), `count`, `windowStart` (timestamptz) | PK `key`. Fixed-window counters (§5, ADR-0009). Holds client IPs for sign-in limits; rows are reused per key, not cleaned up. |
 | **AiCallLog** | `id`, `ticketId?`, `kind` (`CLASSIFY`/`DRAFT`), `model`, `promptVersion?`, `outcome` (`OK`/`TIMEOUT`/`RATE_LIMITED`/`INVALID_OUTPUT`/`PROVIDER_ERROR`/`DISABLED`), `inputTokens?`, `outputTokens?`, `thinkingTokens?`, `latencyMs`, `createdAt` (`promptVersion` and `thinkingTokens` arrive with T5.1) | Cost and reliability evidence (AI-08, DRAFT-07). Contains no prompt text or PII. |
 
 Enums: `Role`, `TicketStatus`, `TicketCategory`, `TicketPriority` (declared `CRITICAL, HIGH, MEDIUM, LOW` so that Postgres enum ordering sorts Critical first), `ClassificationStatus`, `AiCallKind`, `AiCallOutcome`.
@@ -122,7 +123,7 @@ Design rules (rationale in **ADR-0005**):
 **Conventions**
 - JSON in and out. Resource nouns. Namespaces mirror the role boundary: `/api/auth/*`, `/api/author/*` (data scoped to the authenticated author), `/api/admin/*`.
 - Success responses: `200` returns `{ data }` (lists: `{ data, page, pageSize, total }`). Create returns `201 { data }`.
-- Error responses: `{ error: { code, message, details? } }`. Codes: `VALIDATION_ERROR` 400, `UNAUTHENTICATED` 401, `FORBIDDEN` 403, `NOT_FOUND` 404, `CONFLICT` 409, `AI_UNAVAILABLE` 503, `INTERNAL_ERROR` 500 (message is generic; details are logged server-side only).
+- Error responses: `{ error: { code, message, details? } }`. Codes: `VALIDATION_ERROR` 400, `UNAUTHENTICATED` 401, `FORBIDDEN` 403, `NOT_FOUND` 404, `CONFLICT` 409, `RATE_LIMITED` 429 (with a `Retry-After` header in seconds), `AI_UNAVAILABLE` 503, `INTERNAL_ERROR` 500 (message is generic; details are logged server-side only).
 - In route handlers, `params` is a Promise in Next 15+ and must be awaited.
 - **CSRF (API-05):** `withApi` refuses POST/PUT/PATCH/DELETE whose `Origin` header names a different origin (403). Requests without an `Origin` header, such as curl or server-to-server calls, are allowed; browsers always send one on cross-site mutations, and the `SameSite=Lax` cookie is the primary defence.
 - **Request bodies:** `parseJson` requires `Content-Type: application/json`, so plain cross-site HTML forms can't submit.
@@ -132,20 +133,20 @@ Design rules (rationale in **ADR-0005**):
 
 | Method | Path | Role | Purpose | Notes |
 |---|---|---|---|---|
-| POST | `/api/auth/login` | public | `{email,password}` → sets HttpOnly JWT cookie, returns user `{id,name,role,authorId}` (never the token) | Generic 401 on failure. Email is trimmed and lowercased |
+| POST | `/api/auth/login` | public | `{email,password}` → sets HttpOnly JWT cookie, returns user `{id,name,role,authorId}` (never the token) | Generic 401 on failure. Email is trimmed and lowercased. 429 after 10 failed sign-ins per IP in 15 min |
 | POST | `/api/auth/logout` | any signed-in | Clears the cookie → `{loggedOut:true}` | 401 without a session |
 | GET | `/api/auth/me` | any signed-in | Current user `{id,name,role,authorId}` | 401 if the user no longer exists |
 | GET | `/api/author/books` | AUTHOR | Own books (all 15 fields), totals, and `payout { thresholdInr, belowThreshold }` | Dates as `YYYY-MM-DD` |
 | GET | `/api/author/tickets` | AUTHOR | Own tickets `{id,subject,description,status,book,createdAt,updatedAt}`, most recently updated first | |
-| POST | `/api/author/tickets` | AUTHOR | `{bookId|null, subject, description}` → 201 | Book must be owned. Schedules classification. |
+| POST | `/api/author/tickets` | AUTHOR | `{bookId|null, subject, description}` → 201 | Book must be owned. Schedules classification. 429 over 10 per author in 10 min |
 | GET | `/api/author/tickets/:id` | AUTHOR | Own ticket and message thread (`messages[]`: body, sender name and role, time) | 404 if not own. No notes, drafts, priority, category, AI fields or assignee. |
 | GET | `/api/admin/tickets` | ADMIN | Queue. Query: `status` (multi), `category`, `priority`, `unclassified`, `assignee=me\|none`, `from`, `to`, `page`, `pageSize` | Default: unresolved, priority asc (nulls first), createdAt asc |
 | GET | `/api/admin/tickets/:id` | ADMIN | Ticket, author summary `{name,email,city}`, full book, messages, notes, latest draft, AI metadata | `latestDraft` is null until AI drafting (T5.6) |
 | PATCH | `/api/admin/tickets/:id` | ADMIN | `{status?, category?, priority?, assignToMe?: true}` | `assignToMe` sets the assignee to the caller; there is no way to assign others |
 | POST | `/api/admin/tickets/:id/messages` | ADMIN | `{body, aiDraftId?, status?}` → author-visible reply, `{message, status}` | One transaction. Moves Open to In Progress if no status is given; bumps `updatedAt`; `aiDraftId` must belong to the ticket |
 | POST | `/api/admin/tickets/:id/notes` | ADMIN | `{body}` → internal note | Doesn't change `updatedAt` (authors see it) |
-| POST | `/api/admin/tickets/:id/drafts` | ADMIN | Generate or regenerate an AI draft | 503 `AI_UNAVAILABLE` on any AI failure |
-| POST | `/api/admin/tickets/:id/classification` | ADMIN | Retry AI classification synchronously | Never overwrites admin overrides |
+| POST | `/api/admin/tickets/:id/drafts` | ADMIN | Generate or regenerate an AI draft | 503 `AI_UNAVAILABLE` on any AI failure. 429 over the per-admin AI limit (shared with classification retries) |
+| POST | `/api/admin/tickets/:id/classification` | ADMIN | Retry AI classification synchronously | Never overwrites admin overrides. 429 over the per-admin AI limit |
 
 Access-control rules: (1) Every handler is wrapped by `withApi(handler, { access })`. `access` is required: `PUBLIC` (login only), `AUTHENTICATED`, `AUTHOR` or `ADMIN`. It returns 401 or 403 before the handler body runs, and passes the handler a `user` typed by access level, so AUTHOR handlers always get a non-null `user.authorId` from the token. (2) Author services take `authorId` **from the verified token only**, never from params or body, and every query includes `where: { authorId }`. Another author's record therefore behaves as non-existent (404), which avoids leaking that IDs exist. (3) Author responses use explicit DTO `select`s, not `include: *`, so fields cannot leak. (4) Admins can access all tickets but can only assign tickets to themselves (MGMT-03).
 
@@ -174,7 +175,15 @@ The approach is **email/password login, with a signed JWT in an HttpOnly cookie*
   4. Services scope author data by `ctx.user.authorId`, which comes from the verified token and never from client input.
 - **CSRF:** `SameSite=Lax`, plus the `Origin` check on mutations in `withApi` (see §4).
 - **Security headers:** `next.config.ts` sends `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY` (no page may be framed, against clickjacking), `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin` on every response. There is no full script CSP.
-- **Login abuse:** no rate limiting in scope. This is a documented limitation.
+- **Rate limiting (ADR-0009, `src/server/http/rate-limit.ts`):** fixed-window counters in the `RateLimit` table, updated with one atomic upsert, so every server instance shares them. Over a limit the API returns 429 `RATE_LIMITED` with `Retry-After`, and the UI shows the message.
+
+  | Rule | Subject | Limit |
+  |---|---|---|
+  | Sign-in | client IP | 10 failed attempts per 15 min. Every attempt is counted before the password check and a success is refunded, so parallel guesses can't slip through |
+  | Ticket creation | author | 10 per 10 min |
+  | AI drafts and classification retries | admin | 30 per 10 min, shared |
+
+  Sign-in is limited per IP, not per account, so nobody can lock out a (shared demo) account. The IP comes from `x-forwarded-for`, which Vercel sets and overwrites; on a host that passes a client-sent value through, the per-IP limit could be bypassed. Background classification of new tickets is bounded by the ticket-creation limit.
 
 ## 6. AI integration
 

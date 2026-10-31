@@ -1,5 +1,6 @@
 import { createTicketSchema } from "@/lib/schemas/tickets";
 import { dataResponse, withApi } from "@/server/http/handler";
+import { consumeRateLimit, RATE_LIMITS } from "@/server/http/rate-limit";
 import { parseJson } from "@/server/http/request";
 import {
   createTicket,
@@ -17,6 +18,7 @@ export const GET = withApi(
 export const POST = withApi(
   async (request, { user }) => {
     const input = await parseJson(request, createTicketSchema);
+    await consumeRateLimit(RATE_LIMITS.ticketCreate, user.authorId);
     return dataResponse(await createTicket(user.authorId, input), 201);
   },
   { access: "AUTHOR" },
