@@ -140,7 +140,7 @@ Design rules (rationale in **ADR-0005**):
 | POST | `/api/author/tickets` | AUTHOR | `{bookId|null, subject, description}` → 201 | Book must be owned. Schedules classification. 429 over 10 per author in 10 min |
 | GET | `/api/author/tickets/:id` | AUTHOR | Own ticket and message thread (`messages[]`: body, sender name and role, time) | 404 if not own. No notes, drafts, priority, category, AI fields or assignee. |
 | GET | `/api/admin/tickets` | ADMIN | Queue. Query: `status` (multi), `category`, `priority`, `unclassified`, `assignee=me\|none`, `from`, `to`, `page`, `pageSize` | Default: unresolved, priority asc (nulls first), createdAt asc |
-| GET | `/api/admin/tickets/:id` | ADMIN | Ticket, author summary `{name,email,city}`, full book, messages, notes, latest draft, AI metadata | `latestDraft` is null until AI drafting (T5.6) |
+| GET | `/api/admin/tickets/:id` | ADMIN | Ticket, author summary `{name,email,city}`, full book, messages, notes, latest draft, AI metadata | `latestDraft` is null until a draft is generated |
 | PATCH | `/api/admin/tickets/:id` | ADMIN | `{status?, category?, priority?, assignToMe?: true}` | `assignToMe` sets the assignee to the caller; there is no way to assign others |
 | POST | `/api/admin/tickets/:id/messages` | ADMIN | `{body, aiDraftId?, status?}` → author-visible reply, `{message, status}` | One transaction. Moves Open to In Progress if no status is given; bumps `updatedAt`; `aiDraftId` must belong to the ticket |
 | POST | `/api/admin/tickets/:id/notes` | ADMIN | `{body}` → internal note | Doesn't change `updatedAt` (authors see it) |
@@ -149,7 +149,7 @@ Design rules (rationale in **ADR-0005**):
 
 Access-control rules: (1) Every handler is wrapped by `withApi(handler, { access })`. `access` is required: `PUBLIC` (login only), `AUTHENTICATED`, `AUTHOR` or `ADMIN`. It returns 401 or 403 before the handler body runs, and passes the handler a `user` typed by access level, so AUTHOR handlers always get a non-null `user.authorId` from the token. (2) Author services take `authorId` **from the verified token only**, never from params or body, and every query includes `where: { authorId }`. Another author's record therefore behaves as non-existent (404), which avoids leaking that IDs exist. (3) Author responses use explicit DTO `select`s, not `include: *`, so fields cannot leak. (4) Admins can access all tickets but can only assign tickets to themselves (MGMT-03).
 
-Full request and response documentation goes in `docs/api.md` (API-04).
+Full request and response documentation is in `docs/api.md` (API-04).
 
 ## 5. Authentication and authorization
 
@@ -192,10 +192,13 @@ The approach is **email/password login, with a signed JWT in an HttpOnly cookie*
 
 ```ts
 interface StructuredGenerator {
-  generate<T>(req: { model: string; system: string; user: string; schema: ZodType<T>; timeoutMs: number }):
-    Promise<{ data: T; usage: { inputTokens?: number; outputTokens?: number } }>;
+  modelFor(task: "CLASSIFY" | "DRAFT"): string; // for logging ("disabled" when AI is off)
+  generate<T>(req: { task: "CLASSIFY" | "DRAFT"; system: string; user: string; schema: ZodType<T> }):
+    Promise<{ data: T; usage: { inputTokens: number | null; outputTokens: number | null; thinkingTokens: number | null } }>;
 }
 ```
+
+The adapter picks the model, thinking level, output cap and timeout from the task.
 
 - `gemini.ts` implements the interface with `@google/genai` (verified against 2.32.0). It calls `generateContent` with `systemInstruction`, `responseMimeType: 'application/json'`, `responseJsonSchema` (generated from the Zod schema), a per-task `thinkingConfig.thinkingLevel`, `maxOutputTokens` and an abort-signal timeout. It leaves `temperature` at the default: Google strongly recommends 1.0 for Gemini 3 models, as lower values can cause looping or degraded output. It reads `usageMetadata` (`promptTokenCount`, `candidatesTokenCount`, `thoughtsTokenCount`).
 - Gemini doesn't enforce some JSON Schema keywords (e.g. `maxLength`); it strips them. Every response is therefore parsed with `JSON.parse` and then `schema.safeParse`, and Zod enforces all bounds.
@@ -333,13 +336,7 @@ Test files run one at a time (`fileParallelism: false`) because they share one d
 
 The production database is hosted (Neon) and is never referenced by `.env` or `.env.test`.
 
-**Local setup:**
-1. `docker compose up -d`.
-2. `cp .env.example .env` and `cp .env.test.example .env.test`.
-3. `npm install`.
-4. `npx prisma migrate dev`.
-5. `npm run db:seed` (needs the local JSON).
-6. `npm run dev`.
+**Local setup:** see the README.
 
 `npm test` resets and migrates only `bookleaf_test`. Tests seed their own synthetic data.
 

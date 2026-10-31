@@ -52,11 +52,11 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T6.3 | AI failure drill | T6.2 | done |
 | T7.1 | Full quality gate | T6.3 | done |
 | T7.2 | Security review | T7.1 | done |
-| T7.3 | Manual end-to-end checklist | T7.1 | todo |
+| T7.3 | Manual end-to-end checklist | T7.1 | done |
 | T7.4 | Production deployment and seed | T7.2, T7.3, T7.8, T7.10 | todo |
-| T7.5 | README and API documentation | T7.4 | todo |
+| T7.5 | README and API documentation | T7.4 | done |
 | T7.6 | One-page write-up | T7.5 | todo |
-| T7.7 | Handover | T7.6 | todo |
+| T7.7 | Handover | T7.6 | dropped |
 | T7.8 | Basic rate limiting | T7.2 | done |
 | T7.9 | Remove the pattern-based draft post-check; simplify the draft panel | T7.8 | done |
 | T7.10 | Draft automatically only before the first reply | T7.9 | done |
@@ -707,6 +707,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Prereqs:** T7.1
 - **Scope:** `docs/test-checklist.md` lists each author and admin workflow, the edge-case books (AUTH007, AUTH009, AUTH003), real-time behaviour and AI-down mode. Run it locally.
 - **Verify:** the checklist is ticked.
+- **Outcome:** run by the owner in the browser on 2026-10-31, covering both portals, AI drafts and classification, AI-down mode, polling and rate limits. Their findings led to T7.9 and T7.10. Session expiry was left to the automated tests.
 
 ### T7.4 Production deployment and seed
 - **Reqs:** DEL-03, DEL-04
@@ -724,6 +725,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Prereqs:** T7.4
 - **Scope:** the README covers setup, credentials, live URL, architecture summary (linking the ADRs), AI integration (prompt strategy, grounding, safety, error handling, cost controls with `AiCallLog` evidence, eval summary), model choice, testing, and limitations and improvements. `docs/api.md` documents every endpoint. Check it against the route files.
 - **Verify:** `verify-delivery` checks that every route is documented.
+- **Outcome:**
+  - `docs/api.md`: all 14 endpoints in the 12 route files, written from the handlers, schemas and services: access, fields and limits, response shapes, errors, rate limits, and curl examples (made-up values only).
+  - `README.md` rewritten: demo accounts and edge-case authors (by ID), features, setup, architecture, key decisions linked to the ADRs, AI integration (prompt strategy, error handling, cost with `AiCallLog` figures, data minimisation, prompt evaluation), model choice, security, testing, limitations and improvements.
+  - Done before T7.4 at the owner's request: the live URL is a placeholder until the owner deploys.
+  - `docs/architecture.md` corrected where it had drifted: the provider interface (§6.1), two outdated API-table notes, and the setup steps, which now live in the README.
 
 ### T7.6 One-page write-up
 - **Reqs:** DEL-07
@@ -734,6 +740,7 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Reqs:** DEL-01, DEL-02
 - **Prereqs:** T7.6
 - **Scope:** confirm that no confidential files or verbatim brief text are committed (the repo is public), grant BookLeaf collaborator access (address pending), review the commit history, and check that the README live URL works from an incognito window.
+- **Outcome:** dropped by the owner (2026-10-31). The repository stays public, so no collaborator access is needed.
 
 ### T7.8 Basic rate limiting
 - **Reqs:** none directly (security baseline next to AUTH-01 and API-05; protects the AI quota behind AI-08)
