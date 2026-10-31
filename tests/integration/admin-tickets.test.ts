@@ -4,6 +4,7 @@ import {
   GET as getTicket,
   PATCH as patchTicket,
 } from "@/app/api/admin/tickets/[id]/route";
+import { POST as postMessage } from "@/app/api/admin/tickets/[id]/messages/route";
 import { POST as postNote } from "@/app/api/admin/tickets/[id]/notes/route";
 import { GET as listQueue } from "@/app/api/admin/tickets/route";
 import { GET as getAuthorTicket } from "@/app/api/author/tickets/[id]/route";
@@ -13,6 +14,7 @@ import type {
   InternalNote,
   Page,
   QueueTicket,
+  SentReply,
 } from "@/lib/api-types";
 import { seedDataset } from "../../prisma/dataset";
 import { edgeCaseRawDataset, toDataset } from "../fixtures/synthetic-dataset";
@@ -572,6 +574,133 @@ describe("POST /api/admin/tickets/:id/notes", () => {
     ).toBe(404);
     expect(
       (await postTo(postNote, t.critical!, { body: "x" }, testAuthor)).status,
+    ).toBe(403);
+  });
+});
+
+describe("POST /api/admin/tickets/:id/messages", () => {
+  async function openTicket(status: "OPEN" | "RESOLVED" = "OPEN") {
+    return db.ticket.create({
+      data: {
+        authorId: "A1",
+        bookId: "B1",
+        subject: "Reply to me",
+        description: "Fixture ticket.",
+        status,
+        updatedAt: new Date("2026-01-01T00:00:00Z"),
+      },
+    });
+  }
+
+  async function reply(ticketId: string, body: unknown) {
+    const response = await postTo(postMessage, ticketId, body);
+    return { response, json: (await response.json()) as { data: SentReply } };
+  }
+
+  it("sends a reply the author sees; Open moves to In Progress (MGMT-05, DRAFT-03)", async () => {
+    const ticket = await openTicket();
+    const { response, json } = await reply(ticket.id, {
+      body: "Thanks, we're on it.",
+    });
+    expect(response.status).toBe(201);
+    expect(json.data).toEqual({
+      message: {
+        id: expect.any(String),
+        body: "Thanks, we're on it.",
+        aiDraftId: null,
+        sender: { id: me.id, name: "Me Admin", role: "ADMIN" },
+        createdAt: expect.any(String),
+      },
+      status: "IN_PROGRESS",
+    });
+
+    const stored = await db.ticket.findUniqueOrThrow({
+      where: { id: ticket.id },
+    });
+    expect(stored.status).toBe("IN_PROGRESS");
+    // The reply counts as activity on the author's list.
+    expect(stored.updatedAt.getTime()).toBeGreaterThan(
+      ticket.updatedAt.getTime(),
+    );
+
+    const authorText = await authorViewText(ticket.id);
+    expect(authorText).toContain("Thanks, we're on it.");
+    expect(authorText).toContain('"status":"IN_PROGRESS"');
+  });
+
+  it("uses the admin's chosen status, and leaves other statuses alone by default", async () => {
+    const chosen = await openTicket();
+    expect(
+      (await reply(chosen.id, { body: "Done.", status: "RESOLVED" })).json.data
+        .status,
+    ).toBe("RESOLVED");
+
+    const resolved = await openTicket("RESOLVED");
+    expect(
+      (await reply(resolved.id, { body: "One more note." })).json.data.status,
+    ).toBe("RESOLVED");
+  });
+
+  it("links a draft of this ticket, and rejects another ticket's draft without saving anything", async () => {
+    const ticket = await openTicket();
+    const other = await openTicket();
+    const draftFor = (ticketId: string) =>
+      db.aiDraft.create({
+        data: {
+          ticketId,
+          body: "Draft body",
+          commitments: [],
+          needsVerification: [],
+          warnings: [],
+          model: "test-model",
+          promptVersion: "test",
+          createdById: me.id,
+        },
+      });
+    const ownDraft = await draftFor(ticket.id);
+    const otherDraft = await draftFor(other.id);
+
+    const linked = await reply(ticket.id, {
+      body: "Edited draft.",
+      aiDraftId: ownDraft.id,
+    });
+    expect(linked.response.status).toBe(201);
+    expect(linked.json.data.message.aiDraftId).toBe(ownDraft.id);
+
+    const fresh = await openTicket();
+    const rejected = await postTo(postMessage, fresh.id, {
+      body: "Wrong draft.",
+      aiDraftId: otherDraft.id,
+    });
+    expect(rejected.status).toBe(400);
+    expect(
+      ((await rejected.json()) as { error: { details: unknown } }).error
+        .details,
+    ).toEqual([
+      { path: "aiDraftId", message: "That draft isn't for this ticket." },
+    ]);
+    expect(
+      await db.ticketMessage.count({ where: { ticketId: fresh.id } }),
+    ).toBe(0);
+    expect(
+      (await db.ticket.findUniqueOrThrow({ where: { id: fresh.id } })).status,
+    ).toBe("OPEN");
+  });
+
+  it("rejects bad bodies (400), unknown tickets (404) and authors (403)", async () => {
+    for (const body of [
+      { body: "  " },
+      { body: "x", status: "DONE" },
+      { body: "x", assigneeId: "y" },
+    ]) {
+      expect((await postTo(postMessage, t.critical!, body)).status).toBe(400);
+    }
+    expect(
+      (await postTo(postMessage, "no-such-ticket", { body: "x" })).status,
+    ).toBe(404);
+    expect(
+      (await postTo(postMessage, t.critical!, { body: "x" }, testAuthor))
+        .status,
     ).toBe(403);
   });
 });

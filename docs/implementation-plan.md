@@ -35,7 +35,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T4.3 | Admin queue UI | T4.1, T2.6 | todo |
 | T4.4 | Ticket update API (status, overrides, assign to self) | T4.2 | done |
 | T4.5 | Internal notes API | T4.2 | done |
-| T4.6 | Admin response API | T4.2 | todo |
+| T4.6 | Admin response API | T4.2 | done |
 | T4.7 | Admin detail UI: context and management controls | T4.3, T4.4 | todo |
 | T4.8 | Admin detail UI: notes and reply composer | T4.7, T4.5, T4.6 | todo |
 | T5.1 | AI provider boundary and Gemini adapter | T1.5, T1.3 | todo |
@@ -465,6 +465,10 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Scope:** `POST /api/admin/tickets/[id]/messages` takes `{body, aiDraftId?, status?}`. Message creation and the status change happen in one transaction. Open moves to In Progress unless a status is given. `aiDraftId` must belong to this ticket.
 - **Acceptance:** the author detail endpoint returns the message. The status transition is correct.
 - **Verify:** integration tests.
+- **Outcome (2026-10-31):**
+  - `sendReply` in `server/services/admin-tickets.ts` (one interactive transaction) and `POST /api/admin/tickets/[id]/messages` → 201 `{ message, status }` (`SentReply`).
+  - Only Open moves to In Progress when no status is given; other statuses stay. The reply also bumps `updatedAt` (the T3.5 follow-up). Another ticket's `aiDraftId` → 400 on `aiDraftId`, with nothing saved.
+  - Tests: 4 integration tests plus the matrix row; suite 263/263; build passes.
 
 ### T4.7 Admin detail UI: context and management controls
 - **Reqs:** MGMT-01, MGMT-03, AI-03, AI-04

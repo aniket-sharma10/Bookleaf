@@ -148,3 +148,9 @@ export type AdminTicketDetail = {
   /** The current AI draft; always null until AI drafting exists. */
   latestDraft: null;
 };
+
+/** POST /api/admin/tickets/:id/messages: the reply and the ticket's new status. */
+export type SentReply = {
+  message: AdminTicketMessage;
+  status: TicketStatus;
+};

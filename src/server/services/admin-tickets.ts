@@ -6,14 +6,16 @@ import type {
   InternalNote,
   Page,
   QueueTicket,
+  SentReply,
 } from "@/lib/api-types";
 import type {
+  CreateMessageInput,
   CreateNoteInput,
   QueueQuery,
   UpdateTicketInput,
 } from "@/lib/schemas/tickets";
 import { getDb } from "@/server/db";
-import { NotFoundError } from "@/server/http/errors";
+import { NotFoundError, ValidationError } from "@/server/http/errors";
 
 import { bookSelect, toAuthorBook } from "./books";
 
@@ -227,4 +229,60 @@ export async function addInternalNote(
     },
   });
   return { ...note, createdAt: note.createdAt.toISOString() };
+}
+
+/**
+ * Sends an author-visible reply (MGMT-04, MGMT-05, DRAFT-03). In one
+ * transaction: store the message, then set the status (the admin's choice,
+ * otherwise Open moves to In Progress) and bump updatedAt so the author's
+ * list shows the activity. Nothing is saved if any step fails.
+ */
+export async function sendReply(
+  ticketId: string,
+  { body, aiDraftId, status }: CreateMessageInput,
+  adminId: string,
+): Promise<SentReply> {
+  return getDb().$transaction(async (tx) => {
+    const ticket = await tx.ticket.findUnique({
+      where: { id: ticketId },
+      select: { status: true },
+    });
+    if (!ticket) throw new NotFoundError("Ticket not found.");
+
+    // A reply can only be based on a draft generated for this ticket.
+    if (aiDraftId) {
+      const draft = await tx.aiDraft.findFirst({
+        where: { id: aiDraftId, ticketId },
+        select: { id: true },
+      });
+      if (!draft) {
+        throw new ValidationError("Invalid request.", [
+          { path: "aiDraftId", message: "That draft isn't for this ticket." },
+        ]);
+      }
+    }
+
+    const message = await tx.ticketMessage.create({
+      data: { ticketId, senderId: adminId, body, aiDraftId: aiDraftId ?? null },
+      select: {
+        id: true,
+        body: true,
+        aiDraftId: true,
+        createdAt: true,
+        sender: { select: { id: true, name: true, role: true } },
+      },
+    });
+
+    const nextStatus =
+      status ?? (ticket.status === "OPEN" ? "IN_PROGRESS" : ticket.status);
+    await tx.ticket.update({
+      where: { id: ticketId },
+      data: { status: nextStatus, updatedAt: new Date() },
+    });
+
+    return {
+      message: { ...message, createdAt: message.createdAt.toISOString() },
+      status: nextStatus,
+    };
+  });
 }
