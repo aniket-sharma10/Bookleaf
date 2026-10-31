@@ -173,6 +173,7 @@ The approach is **email/password login, with a signed JWT in an HttpOnly cookie*
   3. `withApi(handler, { access })` in every route handler is the **actual boundary** (`src/server/http/handler.ts`). It verifies the token (`getUserFromRequest`, `src/server/auth/session.ts`), then checks the role. It returns 401 `UNAUTHENTICATED` or 403 `FORBIDDEN`.
   4. Services scope author data by `ctx.user.authorId`, which comes from the verified token and never from client input.
 - **CSRF:** `SameSite=Lax`, plus the `Origin` check on mutations in `withApi` (see §4).
+- **Security headers:** `next.config.ts` sends `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY` (no page may be framed, against clickjacking), `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin` on every response. There is no full script CSP.
 - **Login abuse:** no rate limiting in scope. This is a documented limitation.
 
 ## 6. AI integration

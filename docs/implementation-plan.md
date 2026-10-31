@@ -51,7 +51,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked` · `deferred`
 | T6.2 | Integration and error-state pass | T6.1, T5.8 | done |
 | T6.3 | AI failure drill | T6.2 | done |
 | T7.1 | Full quality gate | T6.3 | done |
-| T7.2 | Security review | T7.1 | todo |
+| T7.2 | Security review | T7.1 | done |
 | T7.3 | Manual end-to-end checklist | T7.1 | todo |
 | T7.4 | Production deployment and seed | T7.2, T7.3 | todo |
 | T7.5 | README and API documentation | T7.4 | todo |
@@ -692,6 +692,11 @@ Dependencies drive the ordering, not phase numbers alone. T2.1 depends only on T
 - **Prereqs:** T7.1
 - **Scope:** run the `review-security` skill and fix the findings. Run a secret scan (`git grep` for key patterns and a client bundle grep).
 - **Verify:** the findings are resolved or documented.
+- **Outcome:**
+  - Reviewed against the full `review-security` checklist: no Critical, High or Medium findings.
+  - Fixed (Low, defence in depth): nothing refused framing. Today the `SameSite=Lax` cookie isn't sent inside a cross-site iframe, so a framed portal page shows the login screen; the protection shouldn't rest on the cookie setting alone. `next.config.ts` now sends `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff` and a referrer policy (architecture §5). Regression test `tests/security-headers.test.ts`; the headers were also confirmed on `next start` responses.
+  - Accepted and documented: no login or AI-draft rate limiting (§5), and logout doesn't revoke a token before it expires (ADR-0002). The demo credentials are public, so anyone can sign in to the live demo as an admin and use the free Gemini quota; when it runs out, AI degrades to manual (DRAFT-08). Both go in the README's known limitations (T7.5).
+  - Secret scan: `git grep` for key patterns finds only placeholders and local Docker credentials. The real `.env` values (Gemini key, JWT secret, Neon host and password) appear nowhere in the tree or in history. The built `.next/static` bundle has no key, env name, DB URL or server-only code.
 
 ### T7.3 Manual end-to-end checklist
 - **Reqs:** all functional requirements
