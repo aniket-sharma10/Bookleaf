@@ -4,7 +4,7 @@ A support portal for BookLeaf Publishing with two sides:
 - **Authors** see their books and royalties, raise support queries and follow the replies.
 - **The BookLeaf support team** works through a prioritised ticket queue, with AI that classifies each query and drafts a reply grounded in the author's real book data and BookLeaf's policies.
 
-**Live demo:** _URL to be added after deployment._
+**Live demo:** https://bookleaf-iota.vercel.app/
 
 - [Demo accounts](#demo-accounts)
 - [What it does](#what-it-does)
@@ -156,7 +156,7 @@ The full design is in [docs/architecture.md](docs/architecture.md).
 | Dataset IDs as primary keys, values stored exactly as supplied | Every row traces back to the JSON, re-seeding is an idempotent upsert, and nothing is "corrected" |
 | AI suggestions kept separately from the effective category and priority | The AI fills only empty values, so it never overwrites an admin, and overrides stay visible |
 | Rate limits stored in Postgres | They hold across serverless instances with no Redis or other new service |
-| The admin's review is the final check on AI drafts; no pattern-matching post-check | Phrase lists can't tell "has been processed" from "once it has been processed", and false alarms teach people to ignore warnings |
+| Every AI draft is reviewed and sent by an admin | Nothing reaches an author automatically. The model also lists what the draft promises and what to check, so the review is quick |
 | No vector database, embeddings or agent framework | The knowledge base is about 1k tokens in a few sections, so picking sections by category is cheaper, deterministic and testable |
 
 The main decisions are written up in more detail in [docs/adr](docs/adr/README.md).
@@ -309,6 +309,7 @@ UI behaviour is checked by hand with [docs/test-checklist.md](docs/test-checklis
   - The sign-in limit trusts the `x-forwarded-for` header, which Vercel sets itself; other hosts may pass a client-supplied value through.
   - People behind one office IP share the sign-in allowance.
   - Counter rows are never cleaned up.
+- **The database can be slow after being idle.** The hosted Postgres (Neon) pauses when unused, so the first request afterwards can take a few seconds. During testing, one queue refresh timed out waiting for the database; the next refresh recovered.
 - **Polling, not push.** Updates arrive within 5–15 seconds. Polling pauses while a tab is hidden or the browser is offline, and catches up on return.
 - **AI drafts depend on human review.** Nothing automatically checks a draft against the facts. The admin, helped by the promises and checks lists, is the safeguard. The priority rubric is our own assumption, calibrated on our test tickets.
 - **The knowledge base lives in code.** A policy change needs a code change and a deploy.

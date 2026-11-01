@@ -190,7 +190,7 @@ Thinking can't be switched off on these models and is billed as output, so it's 
 
 In both cases the unconfirmed timeline goes in `needsVerification`.
 
-**No automated post-check.** An earlier phrase-matching check was removed: it flagged correct future promises as completed actions. The admin's review, helped by the two lists, is the control. A second model call to review drafts is the upgrade path.
+**Review before sending.** Drafts aren't checked automatically against the facts. The admin's review, helped by the two lists, is the control, and nothing is sent without an explicit Send. A second model call that checks drafts against the facts is the upgrade path.
 
 **When drafts are made:**
 - Automatically, only on the first open of an Open or In Progress ticket with no reply and no draft (`shouldAutoDraft`, `lib/drafts.ts`).
@@ -252,7 +252,7 @@ Development can use a Neon database instead. Its host must be registered in `DEV
 
 **Deployment** (Vercel and Neon):
 - The production database's URLs live only in the hosting provider.
-- `prisma migrate deploy` against it needs `PRISMA_ALLOW_REMOTE_DATABASE=true`.
+- The hosting provider's environment sets `PRISMA_ALLOW_REMOTE_DATABASE=true`. The install step runs `prisma generate` (`postinstall`), which loads `prisma.config.ts`, and the guard would otherwise refuse the hosted `DATABASE_URL`. The build itself runs no migrations, and `prisma migrate deploy` against production needs the same opt-in.
 - Seeding production is a deliberate, separate step, because the seed refuses non-development databases.
 - The AI timeouts must stay below the host's function time limit.
 
